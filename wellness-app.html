@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wellness">
+<title>Wellness App</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{background:#080810;color:#f0ece4;font-family:'DM Sans','Segoe UI',sans-serif;overscroll-behavior:none;-webkit-overflow-scrolling:touch;}
+  input,button,select{font-family:inherit;}
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+  ::-webkit-scrollbar{display:none;}
+  .safe-bottom{padding-bottom:calc(80px + env(safe-area-inset-bottom));}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useRef}=React;
+
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const WORKOUTS=[
+  {day:1,name:"CHEST & TRICEPS",focus:"Push Strength",color:"#ef4444",emoji:"💪",warmup:"5 min treadmill + arm circles",
+   exercises:[
+    {name:"Barbell Bench Press",sets:4,reps:"8-10",rest:90,tip:"Keep shoulder blades pinched. Lower to mid-chest.",muscle:"Chest",swaps:[{name:"Dumbbell Bench Press",tip:"More range of motion."},{name:"Smith Machine Press",tip:"Good for solo lifting."},{name:"Push-Up (weighted)",tip:"Add plates on back."}]},
+    {name:"Incline Dumbbell Press",sets:3,reps:"10-12",rest:75,tip:"45° incline — builds upper chest.",muscle:"Upper Chest",swaps:[{name:"Incline Barbell Press",tip:"Heavier load."},{name:"Incline Smith Machine",tip:"Guided path."},{name:"Cable Incline Fly",tip:"Great isolation."}]},
+    {name:"Cable Chest Fly",sets:3,reps:"12-15",rest:60,tip:"Feel stretch at bottom — squeeze hard at top.",muscle:"Chest",swaps:[{name:"Dumbbell Fly",tip:"Flat bench version."},{name:"Pec Deck Machine",tip:"Best machine isolation."},{name:"Resistance Band Fly",tip:"Band version."}]},
+    {name:"Dips (weighted)",sets:3,reps:"10-12",rest:75,tip:"Lean forward for chest. Full range.",muscle:"Chest/Triceps",swaps:[{name:"Tricep Pushdown",tip:"Cable isolation."},{name:"Close Grip Bench",tip:"Barbell close grip."},{name:"Bench Dips",tip:"Bodyweight."}]},
+    {name:"Tricep Pushdown (cable)",sets:3,reps:"12-15",rest:60,tip:"Elbows locked. Squeeze at bottom.",muscle:"Triceps",swaps:[{name:"Overhead Tricep Ext",tip:"Dumbbell overhead."},{name:"Skull Crushers",tip:"Barbell lying."},{name:"Tricep Kickback",tip:"Dumbbell isolation."}]},
+    {name:"Overhead Tricep Extension",sets:3,reps:"12",rest:60,tip:"Long head focus — arms look bigger.",muscle:"Triceps",swaps:[{name:"Rope Pushdown",tip:"Cable rope finisher."},{name:"Single Arm Overhead",tip:"Better range."},{name:"Diamond Push-Up",tip:"Bodyweight."}]},
+   ],
+   abs:[{name:"Cable Crunch",sets:3,reps:"15",tip:"Round back and crunch DOWN.",swaps:[{name:"Crunch Machine",tip:"Same motion."},{name:"Weighted Sit-Up",tip:"Hold plate."}]},{name:"Leg Raises (bench)",sets:3,reps:"12",tip:"Lower back FLAT. Bent knees if groin hurts.",swaps:[{name:"Hanging Knee Raises",tip:"From pull-up bar."},{name:"Captain's Chair",tip:"Machine support."}]},{name:"Plank",sets:3,reps:"45s",tip:"Squeeze everything.",swaps:[{name:"Dead Bug",tip:"Safer for back."},{name:"Ab Wheel",tip:"Harder."}]}],
+   cardio:{type:"Steady State Base",duration:"20 min",description:"Treadmill comfortable pace. Heart rate 130-150. Builds aerobic base.",icon:"🏃"}},
+  {day:2,name:"LEGS & EXPLOSIVENESS",focus:"Soccer Power",color:"#f97316",emoji:"⚽",warmup:"5 min bike + leg swings + hip circles",
+   exercises:[
+    {name:"Barbell Squat",sets:4,reps:"8-10",rest:90,tip:"Go below parallel. Chest up.",muscle:"Quads/Glutes",swaps:[{name:"Hack Squat Machine",tip:"Best machine swap."},{name:"Leg Press",tip:"Easier on back."},{name:"Goblet Squat",tip:"Dumbbell at chest."}]},
+    {name:"Romanian Deadlift",sets:3,reps:"10",rest:75,tip:"Hamstrings key for sprinting — prevents pulls.",muscle:"Hamstrings",swaps:[{name:"Leg Curl Machine",tip:"Isolates hamstrings."},{name:"Dumbbell RDL",tip:"Same with dumbbells."},{name:"Nordic Curl",tip:"Most soccer-specific."}]},
+    {name:"Leg Press",sets:3,reps:"12-15",rest:75,tip:"Feet shoulder width. Don't lock knees.",muscle:"Quads",swaps:[{name:"Hack Squat",tip:"Similar movement."},{name:"Front Squat",tip:"More quad focus."},{name:"Split Squat",tip:"Dumbbells each hand."}]},
+    {name:"Box Jumps",sets:4,reps:"8",rest:90,tip:"SOCCER SPECIFIC — explosive power. Land soft.",muscle:"Full Legs/Power",swaps:[{name:"Jump Squat",tip:"No box needed."},{name:"Tuck Jump",tip:"Knees to chest."},{name:"Broad Jump",tip:"Sprint power."}]},
+    {name:"Bulgarian Split Squat",sets:3,reps:"10 each",rest:75,tip:"Rear foot on bench. Translates to kicking power.",muscle:"Quads/Glutes",swaps:[{name:"Reverse Lunge",tip:"Easier on knees."},{name:"Walking Lunge",tip:"Dumbbell lunges."},{name:"Step-Up",tip:"Weighted on bench."}]},
+    {name:"Calf Raises (standing)",sets:4,reps:"20",rest:45,tip:"Full range — all the way up and down.",muscle:"Calves",swaps:[{name:"Seated Calf Raise",tip:"Lower calf focus."},{name:"Leg Press Calf",tip:"Toes on leg press."},{name:"Single Leg Raise",tip:"Harder version."}]},
+   ],
+   abs:[{name:"Ab Wheel Rollout",sets:3,reps:"10",tip:"Slow and controlled. Best overall.",swaps:[{name:"Cable Crunch",tip:"Weighted substitute."},{name:"Stability Ball Rollout",tip:"Easier version."}]},{name:"Russian Twists (plate)",sets:3,reps:"20 total",tip:"Rotational strength = harder shots.",swaps:[{name:"Cable Wood Chop",tip:"More resistance."},{name:"Bicycle Crunch",tip:"Bodyweight option."}]},{name:"Bicycle Crunches",sets:3,reps:"20 total",tip:"Slow — elbow actually touches knee.",swaps:[{name:"Cross Body Mountain Climber",tip:"Plank version."},{name:"Oblique Crunch",tip:"Side crunch."}]}],
+   cardio:{type:"Soccer Intervals HIIT",duration:"20 min",description:"30 sec SPRINT level 9-10 → 90 sec walk. 8-10 rounds. This fixes gassing out at soccer.",icon:"⚡"}},
+  {day:3,name:"BACK & BICEPS",focus:"Pull Strength",color:"#3b82f6",emoji:"🏋️",warmup:"5 min rowing machine + shoulder rotations",
+   exercises:[
+    {name:"Pull-Ups / Lat Pulldown",sets:4,reps:"8-10",rest:90,tip:"Wide grip, pull to chest. Feel lats not arms.",muscle:"Lats",swaps:[{name:"Assisted Pull-Up",tip:"If can't do full yet."},{name:"Single Arm Pulldown",tip:"More range."},{name:"Straight Arm Pulldown",tip:"Lat isolation."}]},
+    {name:"Barbell Row",sets:4,reps:"8-10",rest:90,tip:"Hinge at hips, pull to belly. Squeeze top.",muscle:"Mid Back",swaps:[{name:"Dumbbell Row",tip:"Single arm on bench."},{name:"T-Bar Row",tip:"Heavy back work."},{name:"Seated Cable Row",tip:"Cable machine."}]},
+    {name:"Seated Cable Row",sets:3,reps:"12",rest:75,tip:"Full stretch at front, full squeeze at back.",muscle:"Back",swaps:[{name:"Dumbbell Row",tip:"One arm at a time."},{name:"Machine Row",tip:"Chest supported."},{name:"Resistance Band Row",tip:"Band pull."}]},
+    {name:"Face Pulls",sets:3,reps:"15",rest:60,tip:"Pull to face, elbows high. Fixes posture.",muscle:"Rear Delts",swaps:[{name:"Rear Delt Fly",tip:"Dumbbell bent over."},{name:"Reverse Pec Deck",tip:"Machine version."},{name:"Band Pull Apart",tip:"Light band."}]},
+    {name:"Barbell Curl",sets:3,reps:"10-12",rest:60,tip:"No swinging. Slow down — that's where growth is.",muscle:"Biceps",swaps:[{name:"Dumbbell Curl",tip:"Alternate arms."},{name:"Cable Curl",tip:"Constant tension."},{name:"EZ Bar Curl",tip:"Easier on wrists."}]},
+    {name:"Hammer Curl",sets:3,reps:"12",rest:60,tip:"Neutral grip — makes arms look thicker.",muscle:"Biceps/Forearms",swaps:[{name:"Rope Hammer Curl",tip:"Cable rope version."},{name:"Cross Body Curl",tip:"Brachialis focus."},{name:"Reverse Curl",tip:"Forearm builder."}]},
+   ],
+   abs:[{name:"Cable Crunch",sets:3,reps:"15",tip:"Add weight each week.",swaps:[{name:"Crunch Machine",tip:"Machine equivalent."},{name:"Weighted Sit-Up",tip:"Hold plate."}]},{name:"Hanging Knee Raises",sets:3,reps:"12",tip:"Safe for groin — bent knees.",swaps:[{name:"Captain's Chair",tip:"Arm support machine."},{name:"Lying Knee Tuck",tip:"Floor version."}]},{name:"Side Plank",sets:3,reps:"30s each",tip:"Obliques frame your abs.",swaps:[{name:"Cable Side Bend",tip:"Standing cable."},{name:"Dumbbell Side Bend",tip:"Simple movement."}]}],
+   cardio:{type:"Tempo Run",duration:"25 min",description:"Treadmill level 6-7. Hard but sustainable. Can't hold full conversation. Builds engine for 90 min soccer.",icon:"🏃"}},
+  {day:4,name:"SHOULDERS & TRAPS",focus:"Upper Body Width",color:"#8b5cf6",emoji:"🎯",warmup:"5 min treadmill + band pull-aparts",
+   exercises:[
+    {name:"Overhead Press (barbell)",sets:4,reps:"8-10",rest:90,tip:"Standing engages core. Press straight up.",muscle:"Shoulders",swaps:[{name:"Dumbbell Shoulder Press",tip:"More range."},{name:"Smith Machine Press",tip:"Guided path."},{name:"Arnold Press",tip:"Hits all heads."}]},
+    {name:"Dumbbell Lateral Raises",sets:4,reps:"15",rest:60,tip:"Raise to shoulder height ONLY. Builds WIDTH.",muscle:"Side Delts",swaps:[{name:"Cable Lateral Raise",tip:"Constant tension."},{name:"Machine Lateral Raise",tip:"Guided version."},{name:"Band Lateral Raise",tip:"Light resistance."}]},
+    {name:"Arnold Press",sets:3,reps:"12",rest:75,tip:"Rotate as you press — hits all three shoulder heads.",muscle:"Full Shoulder",swaps:[{name:"Dumbbell Press",tip:"Regular press."},{name:"Cable Press",tip:"Standing cable."},{name:"Machine Press",tip:"Shoulder machine."}]},
+    {name:"Face Pulls",sets:3,reps:"15",rest:60,tip:"Every session — fixes posture and protects joints.",muscle:"Rear Delts",swaps:[{name:"Rear Delt Fly",tip:"Dumbbell bent over."},{name:"Reverse Pec Deck",tip:"Machine version."},{name:"Band Pull Apart",tip:"Light band."}]},
+    {name:"Barbell Shrugs",sets:3,reps:"12",rest:60,tip:"Hold 2 seconds at top. Frames your neck.",muscle:"Traps",swaps:[{name:"Dumbbell Shrugs",tip:"More range."},{name:"Smith Machine Shrug",tip:"Heavy load easy."},{name:"Cable Shrug",tip:"Constant tension."}]},
+    {name:"Upright Row",sets:3,reps:"12",rest:60,tip:"Pull to chin, elbows high.",muscle:"Traps/Side Delts",swaps:[{name:"Cable Upright Row",tip:"Smoother movement."},{name:"Dumbbell Upright Row",tip:"Dumbbell version."},{name:"Lateral + Shrug",tip:"Two moves together."}]},
+   ],
+   abs:[{name:"Ab Wheel Rollout",sets:4,reps:"12",tip:"Add 2 reps every week.",swaps:[{name:"Cable Crunch",tip:"Weighted alternative."},{name:"Stability Ball Pass",tip:"Pass ball feet to hands."}]},{name:"Leg Raises (bench)",sets:3,reps:"15",tip:"Controlled lowering builds lower abs.",swaps:[{name:"Hanging Leg Raise",tip:"Harder version."},{name:"Captain's Chair",tip:"Machine support."}]},{name:"Wood Chops (cable)",sets:3,reps:"12 each",tip:"Rotational power for shooting.",swaps:[{name:"Med Ball Slam",tip:"Explosive power."},{name:"Dumbbell Wood Chop",tip:"No cable needed."}]}],
+   cardio:{type:"Soccer Intervals HIIT",duration:"20 min",description:"20 sec ALL-OUT sprint → 40 sec walk. 12-15 rounds. Shorter rest than Tuesday. Lungs hate it. Soccer loves it.",icon:"⚡"}},
+  {day:5,name:"FULL BODY POWER",focus:"Soccer Strength",color:"#10b981",emoji:"⚽",warmup:"5 min bike + dynamic stretches",
+   exercises:[
+    {name:"Power Clean",sets:4,reps:"5",rest:120,tip:"Most athletic gym exercise. Explosive sprint power. Ask trainer for form.",muscle:"Full Body Power",swaps:[{name:"Dumbbell Clean",tip:"Easier to learn."},{name:"Kettlebell Swing",tip:"Great power builder."},{name:"Box Jump",tip:"Similar power."}]},
+    {name:"Deadlift",sets:4,reps:"6-8",rest:120,tip:"Lower back flat, drive through heels.",muscle:"Full Body",swaps:[{name:"Trap Bar Deadlift",tip:"Easier on back."},{name:"Romanian Deadlift",tip:"Lighter hamstring."},{name:"Sumo Deadlift",tip:"Wider stance."}]},
+    {name:"Dumbbell Step-Ups",sets:3,reps:"10 each",rest:75,tip:"Soccer specific — single leg power. Drive knee up.",muscle:"Quads/Glutes",swaps:[{name:"Single Leg Press",tip:"Machine version."},{name:"Reverse Lunge",tip:"No bench needed."},{name:"Bulgarian Split Squat",tip:"Harder variation."}]},
+    {name:"Lateral Bounds",sets:3,reps:"10 each",rest:60,tip:"Jump side to side — lateral quickness for defense.",muscle:"Legs/Agility",swaps:[{name:"Lateral Shuffle",tip:"Quick feet side to side."},{name:"Side Step Squat",tip:"Squat and step."},{name:"Skater Hop",tip:"Single leg lateral."}]},
+    {name:"Pallof Press (cable)",sets:3,reps:"12 each",rest:60,tip:"Anti-rotation core for winning 50/50 balls.",muscle:"Core/Stability",swaps:[{name:"Resistance Band Pallof",tip:"Band version."},{name:"Plank with Reach",tip:"Plank arm forward."},{name:"Suitcase Carry",tip:"Walk with one dumbbell."}]},
+    {name:"Single Leg RDL",sets:3,reps:"10 each",rest:75,tip:"Balance + hamstring. Prevents #1 soccer injury.",muscle:"Hamstrings/Balance",swaps:[{name:"Leg Curl Machine",tip:"Hamstring isolation."},{name:"Nordic Curl",tip:"Soccer-specific."},{name:"Stability Ball Curl",tip:"Feet on ball."}]},
+   ],
+   abs:[{name:"Dragon Flag",sets:3,reps:"8",tip:"Entire body as one unit. Best for athletes.",swaps:[{name:"Decline Sit-Up",tip:"Weighted on bench."},{name:"Hanging Leg Raise",tip:"From pull-up bar."}]},{name:"Medicine Ball Slam",sets:3,reps:"12",tip:"Full core explosion. Soccer power.",swaps:[{name:"Cable Crunch",tip:"Weighted substitute."},{name:"Seated Med Ball Twist",tip:"Rotational power."}]},{name:"Plank Shoulder Tap",sets:3,reps:"20 total",tip:"Anti-rotation. Core stability for soccer.",swaps:[{name:"Dead Bug",tip:"Lying version."},{name:"Bird Dog",tip:"Hands and knees."}]}],
+   cardio:{type:"Agility + Stamina",duration:"25 min",description:"10 min agility ladder/cone work → 15 min steady level 6. Agility sharpens ball touches. Combo builds match fitness.",icon:"🎯"}},
+  {day:6,name:"ABS & CARDIO ONLY",focus:"Cut + Stamina",color:"#f59e0b",emoji:"🔥",warmup:"5 min easy jog",
+   exercises:[
+    {name:"Cable Crunch",sets:4,reps:"15-20",rest:45,tip:"Weighted — last 2 reps should be hard.",muscle:"Upper Abs",swaps:[{name:"Crunch Machine",tip:"Machine version."},{name:"Weighted Sit-Up",tip:"Decline bench."}]},
+    {name:"Hanging Leg Raises",sets:4,reps:"12-15",rest:45,tip:"Full range. Lower abs hardest to develop.",muscle:"Lower Abs",swaps:[{name:"Captain's Chair",tip:"Arm support."},{name:"Bench Leg Raise",tip:"Flat bench."}]},
+    {name:"Ab Wheel Rollout",sets:3,reps:"12",rest:45,tip:"Full extension. Hardest core exercise.",muscle:"Full Core",swaps:[{name:"Stability Ball Rollout",tip:"Easier version."},{name:"Cable Crunch",tip:"Different angle."}]},
+    {name:"Russian Twists (heavy)",sets:3,reps:"20 total",rest:45,tip:"Heavier than usual. Obliques frame abs.",muscle:"Obliques",swaps:[{name:"Cable Wood Chop",tip:"Standing rotation."},{name:"Med Ball Twist",tip:"Partner or wall."}]},
+    {name:"Wood Chops",sets:3,reps:"15 each",rest:45,tip:"High-to-low cable. Soccer rotational power.",muscle:"Obliques/Core",swaps:[{name:"Dumbbell Wood Chop",tip:"No cable needed."},{name:"Pallof Press",tip:"Anti-rotation."}]},
+    {name:"Plank Variations",sets:3,reps:"60s",rest:30,tip:"Standard → side → RKC. All angles.",muscle:"Core",swaps:[{name:"Dead Bug",tip:"Lying core."},{name:"Hollow Body Hold",tip:"Arms overhead."}]},
+   ],
+   abs:[],
+   cardio:{type:"Long Stamina Run",duration:"30-35 min",description:"MOST IMPORTANT CARDIO. Treadmill level 5-6 full time. By week 4 you run this non-stop. Directly fixes gassing out. Add 2 min each week.",icon:"🏃"}},
+];
+
+const STRETCHES=[
+  {id:"morning",name:"Morning Activation",subtitle:"Before work — every day",duration:"10 min",emoji:"🌅",color:"#f97316",when:"Every day before work",list:[
+    {name:"Hip Flexor Lunge",dur:40,sides:true,why:"Prevents groin flare-ups from digging",how:"Kneel one knee, push hips FORWARD. Back straight.",emoji:"🦵"},
+    {name:"Cat-Cow Spine Warmup",dur:30,sides:false,why:"Warms up spine before work",how:"Arch up (exhale), drop belly (inhale). 10 times.",emoji:"🐱"},
+    {name:"Butterfly Groin Stretch",dur:45,sides:false,why:"Targets groin strain — safe for Grade 2",how:"Soles together, press knees toward floor. Breathe deep.",emoji:"🦋"},
+    {name:"Standing Forward Fold",dur:40,sides:false,why:"Decompresses spine",how:"Bend forward. Everything hangs. Grab opposite elbows.",emoji:"🙇"},
+    {name:"Deep Squat Hold",dur:45,sides:false,why:"Opens hips for digging and squats",how:"Feet shoulder-width. As deep as possible.",emoji:"🏋️"},
+  ]},
+  {id:"groin",name:"Groin Fix Routine",subtitle:"Soccer injury — do daily",duration:"12 min",emoji:"🎯",color:"#ef4444",when:"Every day until healed",list:[
+    {name:"Lying Butterfly Stretch",dur:60,sides:false,why:"Most effective for groin — safe for you",how:"Lie on back, soles together. Gentle pressure down. Breathe.",emoji:"🦋"},
+    {name:"Side Lunge Stretch",dur:40,sides:true,why:"Inner thigh from different angle",how:"Wide stance, bend one knee, keep other straight.",emoji:"↔️"},
+    {name:"Seated Wide Leg Stretch",dur:45,sides:false,why:"Deep inner thigh release",how:"Legs wide in V. Reach forward. Don't bounce.",emoji:"🧘"},
+    {name:"Pigeon Pose",dur:50,sides:true,why:"Hip rotators relieve groin tension",how:"One knee forward behind wrist, other leg back. Hips to floor.",emoji:"🕊️"},
+    {name:"Frog Stretch",dur:45,sides:false,why:"Most aggressive inner thigh opener",how:"All fours, slide knees wide. Lower hips. Very gentle.",emoji:"🐸"},
+  ]},
+  {id:"posture",name:"Posture Fix",subtitle:"Stand tall — daily",duration:"12 min",emoji:"👑",color:"#8b5cf6",when:"Every evening",list:[
+    {name:"Wall Angel",dur:40,sides:false,why:"Best for rounded shoulders",how:"Back to wall. Arms goal post. Slide up and down.",emoji:"👼"},
+    {name:"Doorway Chest Stretch",dur:40,sides:false,why:"Opens rounded chest",how:"Arms at 90° on doorframe. Step forward. Chest opens.",emoji:"🚪"},
+    {name:"Chin Tuck",dur:30,sides:false,why:"Fixes forward head posture",how:"Pull chin BACK. Hold 5 sec. Repeat 10 times.",emoji:"🫅"},
+    {name:"Thoracic Extension",dur:45,sides:false,why:"Opens upper back from lifting",how:"Sit on bed edge, lean back over it, arms crossed.",emoji:"🛏️"},
+    {name:"Hip Flexor Stretch",dur:40,sides:true,why:"Fixes lower back posture",how:"Kneel one knee. Push hips forward. Squeeze glute.",emoji:"🦵"},
+    {name:"Cat-Cow",dur:30,sides:false,why:"Restores natural spine curve",how:"Arch up (exhale), drop belly (inhale). 10 slow reps.",emoji:"🐱"},
+  ]},
+  {id:"postwork",name:"Post-Work Recovery",subtitle:"After digging — essential",duration:"15 min",emoji:"😮‍💨",color:"#3b82f6",when:"Every day after work",list:[
+    {name:"Standing Forward Fold",dur:45,sides:false,why:"Decompresses spine after digging",how:"Bend forward. Everything hangs.",emoji:"🙇"},
+    {name:"Pigeon Pose",dur:60,sides:true,why:"After digging your hips are destroyed",how:"One knee forward, back leg extends. Hips to floor.",emoji:"🕊️"},
+    {name:"Supine Spinal Twist",dur:40,sides:true,why:"Releases lower back tension",how:"Lie on back, knee across body. Look away.",emoji:"🌀"},
+    {name:"Butterfly Groin Stretch",dur:50,sides:false,why:"Daily groin recovery",how:"Soles together, press knees down. Deeper each exhale.",emoji:"🦋"},
+    {name:"Legs Up the Wall",dur:60,sides:false,why:"Drains lactic acid — less soreness",how:"Scoot to wall, legs straight up. Breathe 60 seconds.",emoji:"🦵"},
+  ]},
+  {id:"pregame",name:"Pre-Game Warmup",subtitle:"Before soccer",duration:"12 min",emoji:"⚽",color:"#10b981",when:"Before every soccer game",list:[
+    {name:"High Knees (walking)",dur:30,sides:false,why:"Activates hip flexors",how:"Walk forward bringing knees to hip height.",emoji:"🏃"},
+    {name:"Leg Swings (front/back)",dur:30,sides:true,why:"Dynamic warmup for kicking",how:"Hold wall. Swing leg forward and back freely.",emoji:"🦵"},
+    {name:"Leg Swings (side to side)",dur:30,sides:true,why:"Warms groin — CRITICAL for your injury",how:"Hold wall. Swing leg across body and out.",emoji:"↔️"},
+    {name:"Hip Circles",dur:30,sides:true,why:"Full hip mobility for soccer",how:"Stand one leg. Draw big circles with lifted knee.",emoji:"🔄"},
+    {name:"Inchworm",dur:40,sides:false,why:"Full body dynamic warmup",how:"Bend forward, walk hands out, walk feet back.",emoji:"🐛"},
+  ]},
+];
+
+const DEFAULT_HABITS=[
+  {id:1,name:"Wake up at 7:30am",emoji:"⏰",frequency:"daily",days:[],type:"normal"},
+  {id:2,name:"4 water bottles (66.8 oz)",emoji:"💧",frequency:"daily",days:[],type:"normal"},
+  {id:3,name:"Gym workout",emoji:"🏋️",frequency:"daily",days:[],type:"normal"},
+  {id:4,name:"Stretch",emoji:"🤸",frequency:"daily",days:[],type:"normal"},
+  {id:5,name:"Read for 10 minutes",emoji:"📖",frequency:"daily",days:[],type:"normal"},
+  {id:6,name:"Brush Teeth",emoji:"🦷",frequency:"daily",days:[],type:"double"},
+  {id:7,name:"Sleep by midnight",emoji:"😴",frequency:"daily",days:[],type:"normal"},
+  {id:8,name:"Ice groin 3x",emoji:"🧊",frequency:"daily",days:[],type:"normal"},
+  {id:9,name:"150g protein today",emoji:"🍗",frequency:"daily",days:[],type:"normal"},
+];
+
+const DAY_NAMES=["SUN","MON","TUE","WED","THU","FRI","SAT"];
+const DAY_LABELS=["S","M","T","W","T","F","S"];
+const EMOJIS=["⭐","🏋️","💧","📖","🧘","😴","🥗","💊","🚶","✍️","🎯","🎸","💻","🧹","💰","📞","🌿","🏃","🛁","🍎","🤸","🧃","🦷","☀️","⏰","🧊","🍗","⚽"];
+const bg="#080810",card="#0e0e18",bdr="#1a1a26";
+const inp=(ex={})=>({width:"100%",boxSizing:"border-box",background:"#0c0c14",border:`1px solid ${bdr}`,borderRadius:12,color:"#f0ece4",fontSize:15,padding:"12px 14px",fontFamily:"inherit",outline:"none",...ex});
+
+function ls(k,def){try{const v=localStorage.getItem(k);return v?JSON.parse(v):def;}catch{return def;}}
+function ss(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+
+function getTodayKey(){return new Date().toISOString().split("T")[0];}
+function getTodayDay(){return DAY_NAMES[new Date().getDay()];}
+function getLast7(){const d=[];for(let i=6;i>=0;i--){const x=new Date();x.setDate(x.getDate()-i);d.push(x.toISOString().split("T")[0]);}return d;}
+function isToday(h){return h.frequency==="daily"||h.days.includes(getTodayDay());}
+function streak(hid,comp){let s=0;const t=new Date();for(let i=0;i<=365;i++){const d=new Date(t);d.setDate(d.getDate()-i);const k=d.toISOString().split("T")[0];const v=comp[hid]?.[k];const c=typeof v==="object"?(v?.m&&v?.n):!!v;if(c)s++;else if(i>0)break;}return s;}
+function rate7(hid,comp,dbl){const days=getLast7();return Math.round((days.filter(d=>{const v=comp[hid]?.[d];return dbl?(v?.m&&v?.n):!!v;}).length/7)*100);}
+function doneToday(hid,comp,dbl){const v=comp[hid]?.[getTodayKey()];return dbl?(v?.m&&v?.n):!!v;}
+function totalCal(logs){return logs.reduce((s,l)=>s+(Number(l.calories)||0),0);}
+function weekStart(){const d=new Date();d.setDate(d.getDate()-d.getDay());return d.toISOString().split("T")[0];}
+function sleepHours(bed,wake){if(!bed||!wake)return null;const[bh,bm]=bed.split(":").map(Number);const[wh,wm]=wake.split(":").map(Number);let m=(wh*60+wm)-(bh*60+bm);if(m<0)m+=1440;return(m/60).toFixed(1);}
+
+function App(){
+  const[tab,setTab]=useState("habits");
+  // habits
+  const[habits,setHabits]=useState(()=>ls("h_v8",DEFAULT_HABITS));
+  const[comp,setComp]=useState(()=>ls("c_v8",{}));
+  const[hView,setHView]=useState("today");
+  const[addHabit,setAddHabit]=useState(false);
+  const[editH,setEditH]=useState(null);
+  const[nh,setNh]=useState({name:"",emoji:"⭐",frequency:"daily",days:[],type:"normal"});
+  const[delH,setDelH]=useState(null);
+  // workout
+  const[wScr,setWScr]=useState("home");
+  const[wDay,setWDay]=useState(null);
+  const[exI,setExI]=useState(0);
+  const[setI,setSetI]=useState(0);
+  const[absMode,setAbsMode]=useState(false);
+  const[rtimer,setRtimer]=useState(0);
+  const[rrun,setRrun]=useState(false);
+  const[wDone,setWDone]=useState(()=>ls("wd_v3",[]));
+  const[swapEx,setSwapEx]=useState(null);
+  const[overrides,setOverrides]=useState({});
+  const[setLog,setSetLog]=useState({});
+  const[curW,setCurW]=useState("");
+  const[curR,setCurR]=useState("");
+  const[wHist,setWHist]=useState(()=>ls("wh_v2",[]));
+  const[sessSets,setSessSets]=useState([]);
+  const[sessStart,setSessStart]=useState(null);
+  const[recov,setRecov]=useState(null);
+  const[showRecov,setShowRecov]=useState(false);
+  const rref=useRef(null);
+  // stretch
+  const[sScr,setSScr]=useState("home");
+  const[sRout,setSRout]=useState(null);
+  const[sIdx,setSIdx]=useState(0);
+  const[sTimer,setSTimer]=useState(0);
+  const[sRun,setSRun]=useState(false);
+  const[sSide,setSSide]=useState("left");
+  const sref=useRef(null);
+  // calories
+  const[calLogs,setCalLogs]=useState(()=>ls("cal_v4",{}));
+  const[calGoal,setCalGoal]=useState(()=>ls("cg_v4",2500));
+  const[showCal,setShowCal]=useState(false);
+  const[calE,setCalE]=useState({name:"",calories:"",photo:null,aiResult:null});
+  const[aiLoad,setAiLoad]=useState(false);
+  const[editGoal,setEditGoal]=useState(false);
+  const[goalIn,setGoalIn]=useState("");
+  const[vPhoto,setVPhoto]=useState(null);
+  const[fSearch,setFSearch]=useState("");
+  const[fRes,setFRes]=useState([]);
+  const[fLoad,setFLoad]=useState(false);
+  const[calMode,setCalMode]=useState("search");
+  const fref=useRef(null);
+  const stout=useRef(null);
+  // progress
+  const[pView,setPView]=useState("body");
+  const[bodyLogs,setBodyLogs]=useState(()=>ls("bl_v1",[]));
+  const[showBody,setShowBody]=useState(false);
+  const[bodyE,setBodyE]=useState({weight:"",chest:"",waist:"",arms:"",legs:""});
+  const[sleepLogs,setSleepLogs]=useState(()=>ls("sl_v1",[]));
+  const[showSleep,setShowSleep]=useState(false);
+  const[sleepE,setSleepE]=useState({bedtime:"",wakeup:"",quality:3});
+  const[wkProg,setWkProg]=useState(()=>ls("wp_v1",{}));
+  const WGOALS=[{id:1,label:"Gym sessions",target:5,unit:"sessions",emoji:"🏋️"},{id:2,label:"Water bottles",target:28,unit:"bottles",emoji:"💧"},{id:3,label:"Stretch routines",target:5,unit:"sessions",emoji:"🤸"},{id:4,label:"Cardio sessions",target:4,unit:"sessions",emoji:"🏃"}];
+
+  useEffect(()=>{ss("h_v8",habits);},[habits]);
+  useEffect(()=>{ss("c_v8",comp);},[comp]);
+  useEffect(()=>{ss("wd_v3",wDone);},[wDone]);
+  useEffect(()=>{ss("wh_v2",wHist);},[wHist]);
+  useEffect(()=>{ss("cal_v4",calLogs);},[calLogs]);
+  useEffect(()=>{ss("cg_v4",calGoal);},[calGoal]);
+  useEffect(()=>{ss("bl_v1",bodyLogs);},[bodyLogs]);
+  useEffect(()=>{ss("sl_v1",sleepLogs);},[sleepLogs]);
+  useEffect(()=>{ss("wp_v1",wkProg);},[wkProg]);
+
+  useEffect(()=>{
+    if(rrun){rref.current=setInterval(()=>{setRtimer(t=>{if(t<=1){clearInterval(rref.current);setRrun(false);return 0;}return t-1;});},1000);}
+    return()=>clearInterval(rref.current);
+  },[rrun]);
+  useEffect(()=>{
+    if(sRun){sref.current=setInterval(()=>{setSTimer(t=>{if(t<=1){clearInterval(sref.current);setSRun(false);return 0;}return t-1;});},1000);}
+    return()=>clearInterval(sref.current);
+  },[sRun]);
+
+  const today=getTodayKey();
+  const last7=getLast7();
+  const todayH=habits.filter(isToday);
+  const tdone=todayH.filter(h=>doneToday(h.id,comp,h.type==="double")).length;
+  const tpct=todayH.length?Math.round((tdone/todayH.length)*100):0;
+  const tLogs=calLogs[today]||[];
+  const tCal=totalCal(tLogs);
+  const cpct=Math.min(110,Math.round((tCal/calGoal)*100));
+  const ccol=cpct>105?"#f87171":cpct>90?"#facc15":"#4ade80";
+  const lazy=habits.filter(h=>rate7(h.id,comp,h.type==="double")<30);
+  const workout=wDay!==null?WORKOUTS[wDay]:null;
+  const getExs=(i)=>{const ov=overrides[i]||{};return WORKOUTS[i].exercises.map((e,j)=>ov[j]?{...e,...ov[j]}:e);};
+  const curExs=wDay!==null?getExs(wDay):[];
+  const exercise=workout?(absMode?workout.abs[exI]:curExs[exI]):null;
+  const totSets=workout?curExs.reduce((s,e)=>s+e.sets,0):0;
+  const doneSets=workout?curExs.slice(0,exI).reduce((s,e)=>s+e.sets,0)+setI:0;
+  const wprog=totSets?doneSets/totSets:0;
+  const rout=sRout!==null?STRETCHES[sRout]:null;
+  const stretch=rout?rout.list[sIdx]:null;
+  const ws=weekStart();
+  const wkc=(gid)=>(wkProg[ws]||{})[gid]||0;
+  const incWk=(gid)=>setWkProg(p=>{const w={...(p[ws]||{})};w[gid]=(w[gid]||0)+1;return{...p,[ws]:w};});
+
+  function togN(id){setComp(p=>({...p,[id]:{...p[id],[today]:!p[id]?.[today]}}))}
+  function togD(id,slot){setComp(p=>{const cur=p[id]?.[today]||{};return{...p,[id]:{...p[id],[today]:{...cur,[slot]:!cur[slot]}}};})}
+  function saveH(){if(!nh.name.trim())return;if(editH)setHabits(p=>p.map(h=>h.id===editH.id?{...editH,...nh}:h));else setHabits(p=>[...p,{...nh,id:Date.now()}]);setAddHabit(false);setEditH(null);setNh({name:"",emoji:"⭐",frequency:"daily",days:[],type:"normal"});}
+  function startEditH(h){setEditH(h);setNh({name:h.name,emoji:h.emoji,frequency:h.frequency,days:[...h.days],type:h.type||"normal"});setAddHabit(true);}
+  function delHabit(id){setHabits(p=>p.filter(h=>h.id!==id));setDelH(null);}
+  function togDay(d){setNh(p=>({...p,days:p.days.includes(d)?p.days.filter(x=>x!==d):[...p.days,d]}));}
+
+  function startW(i){setWDay(i);setExI(0);setSetI(0);setAbsMode(false);setRtimer(0);setRrun(false);setCurW("");setCurR("");setSessSets([]);setSessStart(Date.now());setRecov(null);setWScr("exercise");}
+  function nextSet(){
+    const logE={exercise:exercise?.name,set:setI+1,weight:curW,reps:curR,timestamp:Date.now()};
+    setSessSets(p=>[...p,logE]);
+    const k=`${wDay}_${exI}_${setI}`;
+    if(curW||curR)setSetLog(p=>({...p,[k]:{weight:curW,reps:curR}}));
+    setCurW("");setCurR("");
+    const src=absMode?workout.abs:curExs;
+    const ex=src[exI];const ms=ex.sets||3;
+    if(setI+1<ms){setSetI(s=>s+1);setRtimer(absMode?30:ex.rest);setRrun(true);setWScr("rest");}
+    else if(exI+1<src.length){setExI(e=>e+1);setSetI(0);setRtimer(absMode?30:(src[exI+1]?.rest||60));setRrun(true);setWScr("rest");}
+    else if(!absMode&&workout.abs.length>0){setAbsMode(true);setExI(0);setSetI(0);setWScr("exercise");}
+    else{setShowRecov(true);}
+  }
+  function finishW(r){
+    const dur=sessStart?Math.round((Date.now()-sessStart)/60000):0;
+    const rec={id:Date.now(),date:today,dayIdx:wDay,dayName:workout?.name,sets:sessSets,totalSets:sessSets.length,duration:dur,recoveryRating:r,cardio:workout?.cardio?.type};
+    setWHist(p=>[rec,...p.slice(0,49)]);
+    setWDone(p=>[...new Set([...p,wDay])]);
+    incWk(1);setShowRecov(false);setWScr("done");
+  }
+  function applySwap(sw){if(wDay===null)return;setOverrides(p=>{const d={...p[wDay]};d[exI]={...sw};return{...p,[wDay]:d};});setSwapEx(null);}
+
+  function startR(i){setSRout(i);setSIdx(0);setSSide("left");setSTimer(0);setSRun(false);setSScr("stretch");}
+  function nextStretch(){if(!rout)return;const s=rout.list[sIdx];if(s.sides&&sSide==="left"){setSSide("right");setSTimer(0);setSRun(false);return;}if(sIdx+1<rout.list.length){setSIdx(i=>i+1);setSSide("left");setSTimer(0);setSRun(false);}else setSScr("done");}
+
+  function handleFS(val){setFSearch(val);clearTimeout(stout.current);stout.current=setTimeout(()=>searchFood(val),700);}
+  async function searchFood(q){
+    if(!q.trim()){setFRes([]);return;}
+    setFLoad(true);
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:`Calorie info for: "${q}". Return ONLY valid JSON array, no markdown:\n[{"name":"food name with brand","calories":number,"protein_g":number,"serving":"serving description"}]\nGive 3-5 best matches.`}]})});
+      const d=await r.json();const t=d.content?.[0]?.text||"[]";setFRes(JSON.parse(t.replace(/\`\`\`json|\`\`\`/g,"").trim()));
+    }catch(e){setFRes([]);}
+    setFLoad(false);
+  }
+  function pickFood(item){setCalE(p=>({...p,name:item.name,calories:String(item.calories),aiResult:{...item,breakdown:`${item.protein_g}g protein · ${item.serving}`}}));setFRes([]);setFSearch("");}
+  function handlePhoto(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setCalE(p=>({...p,photo:ev.target.result}));scanPhoto(ev.target.result);};r.readAsDataURL(f);}
+  async function scanPhoto(data){
+    setAiLoad(true);
+    try{
+      const b64=data.split(",")[1];
+      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:[{type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}},{type:"text",text:`Analyze this food. Respond ONLY with valid JSON, no markdown:\n{"food_name":"name","calories":number,"protein_g":number,"confidence":"low|medium|high","breakdown":"brief macro breakdown"}`}]}]})});
+      const d=await r.json();const t=d.content?.[0]?.text||"{}";const res=JSON.parse(t.replace(/\`\`\`json|\`\`\`/g,"").trim());
+      setCalE(p=>({...p,name:res.food_name||p.name,calories:String(res.calories||""),aiResult:res}));
+    }catch(e){}
+    setAiLoad(false);
+  }
+  function addCal(){if(!calE.name.trim()||!calE.calories)return;const e={id:Date.now(),name:calE.name,calories:Number(calE.calories),photo:calE.photo,time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),aiResult:calE.aiResult};setCalLogs(p=>({...p,[today]:[...(p[today]||[]),e]}));setCalE({name:"",calories:"",photo:null,aiResult:null});setFSearch("");setFRes([]);setShowCal(false);}
+  function delCal(date,id){setCalLogs(p=>({...p,[date]:(p[date]||[]).filter(e=>e.id!==id)}));}
+  function addBodyLog(){if(!bodyE.weight)return;setBodyLogs(p=>[{...bodyE,id:Date.now(),date:today},...p]);setBodyE({weight:"",chest:"",waist:"",arms:"",legs:""});setShowBody(false);}
+  function addSleepLog(){if(!sleepE.bedtime||!sleepE.wakeup)return;const hrs=sleepHours(sleepE.bedtime,sleepE.wakeup);setSleepLogs(p=>[{...sleepE,hours:hrs,id:Date.now(),date:today},...p]);setSleepE({bedtime:"",wakeup:"",quality:3});setShowSleep(false);}
+
+  function HCard({h}){
+    const isD=h.type==="double";const val=comp[h.id]?.[today];
+    const mD=isD?!!val?.m:false;const nD=isD?!!val?.n:false;
+    const full=isD?(mD&&nD):!!val;const s=streak(h.id,comp);
+    return <div style={{padding:"13px 14px",background:full?"#111e16":card,border:`1px solid ${full?"#1e3e28":bdr}`,borderRadius:15,marginBottom:9}}>
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div onClick={()=>!isD&&togN(h.id)} style={{display:"flex",alignItems:"center",gap:12,flex:1,minWidth:0,cursor:isD?"default":"pointer"}}>
+          <div style={{width:42,height:42,borderRadius:12,background:full?"#162418":"#14141e",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0,border:`1px solid ${full?"#2a4a35":"#202030"}`}}>{h.emoji}</div>
+          <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:14,color:full?"#3a6a4a":"#f0ece4",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textDecoration:full&&!isD?"line-through":"none"}}>{h.name}</div><div style={{fontSize:10,color:"#444",marginTop:2}}>{s>0?`🔥 ${s} day streak`:"Start your streak!"}</div></div>
+        </div>
+        <div style={{display:"flex",gap:6,flexShrink:0}}>
+          <button onClick={()=>startEditH(h)} style={{background:"#1a1a26",border:"none",borderRadius:7,color:"#555",fontSize:11,padding:"4px 7px",cursor:"pointer"}}>✏️</button>
+          {!isD&&<div onClick={()=>togN(h.id)} style={{width:26,height:26,borderRadius:7,background:full?"#4ade80":"transparent",border:`2px solid ${full?"#4ade80":"#252535"}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>{full&&<span style={{color:"#080810",fontSize:13,fontWeight:900}}>✓</span>}</div>}
+        </div>
+      </div>
+      {isD&&<div style={{display:"flex",gap:10,marginTop:11,paddingLeft:54}}>{[["m","🌅 Morning",mD],["n","🌙 Night",nD]].map(([sl,lb,dn])=><button key={sl} onClick={()=>togD(h.id,sl)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,padding:"8px 10px",background:dn?"#162418":"#0e0e16",border:`1.5px solid ${dn?"#2a5a35":"#252535"}`,borderRadius:10,cursor:"pointer"}}><div style={{width:20,height:20,borderRadius:5,background:dn?"#4ade80":"transparent",border:`2px solid ${dn?"#4ade80":"#303048"}`,display:"flex",alignItems:"center",justifyContent:"center"}}>{dn&&<span style={{color:"#080810",fontSize:11,fontWeight:900}}>✓</span>}</div><span style={{fontSize:12,color:dn?"#4ade80":"#555",fontWeight:dn?600:400}}>{lb}</span></button>)}</div>}
+    </div>;
+  }
+
+  return <div style={{minHeight:"100vh",background:bg,color:"#f0ece4",paddingBottom:90}} className="safe-bottom">
+
+    {/* NAV */}
+    <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0c0c14",borderTop:`1px solid ${bdr}`,display:"flex",zIndex:50,paddingBottom:"env(safe-area-inset-bottom)"}}>
+      {[["habits","✅","Habits"],["workout","🏋️","Workout"],["stretch","🤸","Stretch"],["calories","🍽️","Calories"],["progress","📊","Progress"]].map(([k,e,l])=>
+        <button key={k} onClick={()=>setTab(k)} style={{flex:1,background:"none",border:"none",color:tab===k?"#5b52f0":"#333",fontFamily:"inherit",fontSize:9,fontWeight:tab===k?700:400,padding:"10px 0 8px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}><span style={{fontSize:18}}>{e}</span>{l}</button>
+      )}
+    </div>
+
+    {/* ═══ HABITS ═══ */}
+    {tab==="habits"&&<div>
+      <div style={{padding:"28px 22px 16px",background:`linear-gradient(180deg,#13131e,${bg})`,borderBottom:`1px solid ${bdr}`,position:"sticky",top:0,zIndex:20}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div><div style={{fontSize:10,letterSpacing:3,color:"#33335a",textTransform:"uppercase",marginBottom:4}}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div><h1 style={{margin:0,fontSize:24,fontWeight:800,letterSpacing:-0.5}}>My Habits</h1></div>
+          <button onClick={()=>{setEditH(null);setNh({name:"",emoji:"⭐",frequency:"daily",days:[],type:"normal"});setAddHabit(true);}} style={{background:"#5b52f0",border:"none",borderRadius:12,color:"#fff",fontSize:22,width:42,height:42,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 18px #5b52f044"}}>+</button>
+        </div>
+        {hView==="today"&&<div style={{marginTop:16}}><div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#555",marginBottom:7}}><span>{tdone}/{todayH.length} done</span><span style={{color:tpct===100?"#4ade80":tpct>=60?"#facc15":"#f87171"}}>{tpct}%</span></div><div style={{background:"#1a1a26",borderRadius:99,height:5,overflow:"hidden"}}><div style={{height:"100%",width:`${tpct}%`,background:tpct===100?"linear-gradient(90deg,#4ade80,#22d3ee)":tpct>=60?"linear-gradient(90deg,#facc15,#f97316)":"linear-gradient(90deg,#f87171,#ec4899)",borderRadius:99,transition:"width .4s"}}/></div></div>}
+      </div>
+      <div style={{display:"flex",padding:"0 22px",borderBottom:`1px solid ${bdr}`,background:bg,overflowX:"auto"}}>
+        {[["today","Today"],["week","Week"],["stats","Stats"]].map(([k,l])=><button key={k} onClick={()=>setHView(k)} style={{background:"none",border:"none",color:hView===k?"#5b52f0":"#444",fontFamily:"inherit",fontSize:13,fontWeight:hView===k?700:400,padding:"10px 14px 13px",cursor:"pointer",borderBottom:hView===k?"2px solid #5b52f0":"2px solid transparent",marginBottom:-1,whiteSpace:"nowrap"}}>{l}</button>)}
+      </div>
+      <div style={{padding:"16px 22px"}}>
+        {hView==="today"&&<div>
+          <div style={{background:"linear-gradient(135deg,#0e0e1a,#131320)",border:"1px solid #252540",borderRadius:14,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:12}}><span style={{fontSize:20}}>🛏️</span><div><div style={{fontSize:12,fontWeight:700,color:"#8888cc"}}>Sleep tip for 7:30am wake-up</div><div style={{fontSize:11,color:"#555",marginTop:2}}>Best: <span style={{color:"#a0a0ff"}}>10:30pm</span> (9h) or <span style={{color:"#a0a0ff"}}>midnight</span> (7.5h)</div></div></div>
+          {todayH.map(h=><HCard key={h.id} h={h}/>)}
+          {habits.filter(h=>!isToday(h)).length>0&&<div style={{marginTop:18}}><div style={{fontSize:10,color:"#333",letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>Not today</div>{habits.filter(h=>!isToday(h)).map(h=><div key={h.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 13px",background:"#0c0c10",border:"1px solid #141420",borderRadius:11,marginBottom:7,opacity:.45}}><span style={{fontSize:16}}>{h.emoji}</span><span style={{fontSize:12,color:"#444"}}>{h.name}</span></div>)}</div>}
+        </div>}
+        {hView==="week"&&<div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr repeat(7,30px)",gap:5,alignItems:"center",marginBottom:8,padding:"0 3px"}}><div/>{last7.map(d=>{const iT=d===today,di=new Date(d+"T12:00:00").getDay();return<div key={d} style={{textAlign:"center"}}><div style={{fontSize:8,color:iT?"#5b52f0":"#333",marginBottom:2}}>{DAY_LABELS[di]}</div><div style={{fontSize:8,color:iT?"#5b52f0":"#2a2a3a",fontWeight:iT?700:400}}>{new Date(d+"T12:00:00").getDate()}</div></div>;})}</div>
+          {habits.map(h=>{const isD=h.type==="double";return<div key={h.id} style={{display:"grid",gridTemplateColumns:"1fr repeat(7,30px)",gap:5,alignItems:"center",marginBottom:7,padding:"8px 3px",background:card,borderRadius:12,border:`1px solid ${bdr}`}}><div style={{display:"flex",alignItems:"center",gap:7,paddingLeft:7,minWidth:0}}><span style={{fontSize:14}}>{h.emoji}</span><span style={{fontSize:11,color:"#888",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{h.name}</span></div>{last7.map(d=>{const di=new Date(d+"T12:00:00").getDay();const sc=h.frequency==="daily"||h.days.includes(DAY_NAMES[di]);const v=comp[h.id]?.[d];const dn=isD?(v?.m&&v?.n):!!v;const hf=isD&&(v?.m||v?.n)&&!(v?.m&&v?.n);const iT=d===today;return<div key={d} onClick={()=>{if(iT&&sc&&!isD)togN(h.id);}} style={{width:26,height:26,borderRadius:7,margin:"0 auto",background:!sc?"transparent":dn?"#4ade80":hf?"#facc1544":"#1a1a26",border:!sc?"1px dashed #141420":dn?"1px solid #4ade80":hf?"1px solid #facc1577":`1px solid ${iT?"#303050":bdr}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:iT&&sc&&!isD?"pointer":"default"}}>{dn&&sc&&<span style={{color:"#080810",fontSize:11,fontWeight:900}}>✓</span>}{hf&&<span style={{color:"#facc15",fontSize:10}}>½</span>}</div>;})}
+          </div>;})}
+        </div>}
+        {hView==="stats"&&<div>
+          {lazy.length>0&&<div style={{background:"#180e0e",border:"1px solid #3a1818",borderRadius:15,padding:16,marginBottom:18}}><div style={{fontSize:11,color:"#f87171",fontWeight:700,marginBottom:10}}>😬 SLACKING ON THESE</div>{lazy.map(h=><div key={h.id} style={{display:"flex",alignItems:"center",gap:9,marginBottom:7}}><span style={{fontSize:16}}>{h.emoji}</span><span style={{fontSize:12,color:"#f87171",flex:1}}>{h.name}</span><span style={{fontSize:10,color:"#7a3030"}}>{rate7(h.id,comp,h.type==="double")}%</span></div>)}</div>}
+          {habits.map(h=>{const r=rate7(h.id,comp,h.type==="double");const s=streak(h.id,comp);const c=r>=80?"#4ade80":r>=50?"#facc15":"#f87171";return<div key={h.id} style={{background:card,border:`1px solid ${bdr}`,borderRadius:15,padding:"13px 15px",marginBottom:9}}><div style={{display:"flex",alignItems:"center",gap:9,marginBottom:9}}><span style={{fontSize:19}}>{h.emoji}</span><div style={{flex:1}}><div style={{fontSize:14,fontWeight:600}}>{h.name}</div></div><div style={{textAlign:"right"}}><div style={{fontSize:18,fontWeight:700,color:c}}>{r}%</div><div style={{fontSize:9,color:"#333"}}>7-day</div></div></div><div style={{background:bg,borderRadius:99,height:5,overflow:"hidden",marginBottom:7}}><div style={{height:"100%",width:`${r}%`,background:c,borderRadius:99}}/></div><div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#444"}}><span>🔥 {s} day streak</span><div style={{display:"flex",gap:6}}><button onClick={()=>startEditH(h)} style={{background:"#1a1a26",border:"none",borderRadius:6,color:"#777",fontSize:10,padding:"3px 8px",cursor:"pointer"}}>Edit</button><button onClick={()=>setDelH(h.id)} style={{background:"#200f0f",border:"none",borderRadius:6,color:"#f87171",fontSize:10,padding:"3px 8px",cursor:"pointer"}}>Delete</button></div></div></div>;})}
+        </div>}
+      </div>
+    </div>}
+
+    {/* ═══ WORKOUT ═══ */}
+    {tab==="workout"&&<div>
+      {wScr==="home"&&<div>
+        <div style={{padding:"28px 22px 20px",background:`linear-gradient(180deg,#13131e,${bg})`}}>
+          <div style={{fontSize:10,letterSpacing:4,color:"#333",textTransform:"uppercase",marginBottom:6}}>Gym Program</div>
+          <div style={{fontSize:28,fontWeight:900,letterSpacing:-1,lineHeight:1.1}}>6-DAY GYM<br/><span style={{color:"#ef4444"}}>+ SOCCER</span></div>
+          <div style={{fontSize:12,color:"#444",marginTop:8}}>Swap exercises · Log sets · Track history</div>
+          <div style={{display:"flex",gap:6,marginTop:14,flexWrap:"wrap"}}>{WORKOUTS.map((w,i)=><div key={i} style={{width:30,height:30,borderRadius:7,background:wDone.includes(i)?w.color:"#141420",border:`1px solid ${wDone.includes(i)?w.color:"#1e1e2c"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>{wDone.includes(i)?"✓":w.emoji}</div>)}<div style={{display:"flex",alignItems:"center",fontSize:11,color:"#333",marginLeft:4}}>{wDone.length}/6</div></div>
+        </div>
+        <div style={{padding:"8px 22px"}}>
+          {WORKOUTS.map((w,i)=><div key={i} onClick={()=>startW(i)} style={{background:card,border:`1px solid ${wDone.includes(i)?w.color+"44":bdr}`,borderRadius:18,marginBottom:12,overflow:"hidden",cursor:"pointer"}}>
+            <div style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px"}}>
+              <div style={{width:46,height:46,borderRadius:13,background:w.color+"22",border:`1px solid ${w.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{w.emoji}</div>
+              <div style={{flex:1}}><div style={{fontSize:10,color:w.color,letterSpacing:2,textTransform:"uppercase",marginBottom:2}}>Day {w.day} · {w.focus}</div><div style={{fontSize:16,fontWeight:800}}>{w.name}</div><div style={{fontSize:11,color:"#444",marginTop:2}}>{w.exercises.length} exercises · {w.cardio.type}</div></div>
+              <div style={{fontSize:18,color:wDone.includes(i)?w.color:"#252535"}}>{wDone.includes(i)?"✓":"▶"}</div>
+            </div>
+            <div style={{background:w.color+"11",padding:"5px 18px",fontSize:11,color:w.color+"88"}}>{w.cardio.icon} {w.cardio.type} · {w.cardio.duration}</div>
+          </div>)}
+          {wDone.length>0&&<button onClick={()=>setWDone([])} style={{width:"100%",background:"none",border:`1px solid ${bdr}`,borderRadius:12,color:"#333",fontSize:12,padding:"10px",cursor:"pointer",fontFamily:"inherit",marginTop:4}}>Reset progress</button>}
+        </div>
+      </div>}
+
+      {wScr==="exercise"&&workout&&exercise&&<div style={{minHeight:"100vh",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"20px 22px 14px",borderBottom:"1px solid #141420"}}>
+          <button onClick={()=>setWScr("home")} style={{background:"none",border:"none",color:"#555",fontSize:13,cursor:"pointer",fontFamily:"inherit",padding:0,marginBottom:10}}>← Back</button>
+          <div style={{fontSize:10,color:workout.color,letterSpacing:2,textTransform:"uppercase",marginBottom:3}}>Day {workout.day} · {absMode?"ABS":workout.name}</div>
+          <div style={{background:"#141420",borderRadius:99,height:4,overflow:"hidden",marginBottom:6}}><div style={{height:"100%",width:absMode?"100%":`${wprog*100}%`,background:workout.color,borderRadius:99,transition:"width .3s"}}/></div>
+          <div style={{fontSize:10,color:"#333"}}>{absMode?"ABS SECTION":`${exI+1}/${curExs.length} · Set ${setI+1}/${exercise?.sets||3}`}</div>
+        </div>
+        {exI===0&&setI===0&&!absMode&&<div style={{margin:"12px 22px 0",background:"#0f1a0f",border:"1px solid #1e3a1e",borderRadius:11,padding:"9px 13px"}}><div style={{fontSize:9,color:"#4ade80",letterSpacing:2,textTransform:"uppercase",marginBottom:2}}>🔥 WARM UP</div><div style={{fontSize:11,color:"#3a6a3a"}}>{workout.warmup}</div></div>}
+        <div style={{flex:1,padding:"16px 22px",overflowY:"auto"}}>
+          <div style={{background:card,border:`1px solid ${workout.color}33`,borderRadius:20,padding:"18px 18px",marginBottom:12}}>
+            <div style={{fontSize:10,color:workout.color,letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>{absMode?"CORE":exercise.muscle}</div>
+            <div style={{fontSize:22,fontWeight:900,letterSpacing:-0.5,marginBottom:10}}>{exercise.name}</div>
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
+              <div style={{background:workout.color+"22",borderRadius:10,padding:"9px 12px",textAlign:"center",flex:1}}><div style={{fontSize:18,fontWeight:900,color:workout.color}}>{exercise.reps}</div><div style={{fontSize:9,color:"#555"}}>REPS</div></div>
+              <div style={{background:"#141420",borderRadius:10,padding:"9px 12px",textAlign:"center",flex:1}}><div style={{fontSize:18,fontWeight:900}}>{setI+1}<span style={{fontSize:11,color:"#333"}}>/{exercise.sets||3}</span></div><div style={{fontSize:9,color:"#555"}}>SET</div></div>
+              {!absMode&&<div style={{background:"#141420",borderRadius:10,padding:"9px 12px",textAlign:"center",flex:1}}><div style={{fontSize:18,fontWeight:900}}>{exercise.rest}<span style={{fontSize:10,color:"#333"}}>s</span></div><div style={{fontSize:9,color:"#555"}}>REST</div></div>}
+            </div>
+            <div style={{background:"#141420",borderRadius:11,padding:"10px 13px",display:"flex",gap:9,marginBottom:12}}><span style={{fontSize:14}}>💡</span><div style={{fontSize:11,color:"#888",lineHeight:1.5}}>{exercise.tip}</div></div>
+            <div style={{background:"#0a1a14",border:"1px solid #1a3a28",borderRadius:11,padding:"11px 13px"}}>
+              <div style={{fontSize:9,color:"#4ade80",letterSpacing:2,marginBottom:9}}>📝 LOG THIS SET</div>
+              <div style={{display:"flex",gap:8}}>
+                <div style={{flex:1}}><div style={{fontSize:9,color:"#555",marginBottom:4}}>WEIGHT (lbs)</div><input value={curW} onChange={e=>setCurW(e.target.value)} placeholder="135" type="number" style={{width:"100%",boxSizing:"border-box",background:"#0c0c14",border:"1px solid #1e3e28",borderRadius:9,color:"#f0ece4",fontSize:16,padding:"9px 12px",fontFamily:"inherit",outline:"none"}}/></div>
+                <div style={{flex:1}}><div style={{fontSize:9,color:"#555",marginBottom:4}}>ACTUAL REPS</div><input value={curR} onChange={e=>setCurR(e.target.value)} placeholder="10" type="number" style={{width:"100%",boxSizing:"border-box",background:"#0c0c14",border:"1px solid #1e3e28",borderRadius:9,color:"#f0ece4",fontSize:16,padding:"9px 12px",fontFamily:"inherit",outline:"none"}}/></div>
+              </div>
+              {setI>0&&<div style={{marginTop:9}}><div style={{fontSize:9,color:"#333",marginBottom:4}}>PREV SETS</div><div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{Array.from({length:setI}).map((_,i)=>{const k=`${wDay}_${exI}_${i}`;const l=setLog[k];return l?<div key={i} style={{background:"#141420",borderRadius:6,padding:"3px 7px",fontSize:9,color:"#666"}}>S{i+1}: {l.weight?l.weight+"lb":""} {l.reps?l.reps+"r":""}</div>:null;})}</div></div>}
+            </div>
+          </div>
+          {!absMode&&exercise.swaps?.length>0&&<button onClick={()=>setSwapEx(exercise)} style={{width:"100%",background:"#1a1a10",border:"1px solid #3a3a10",borderRadius:11,color:"#facc15",fontSize:13,fontWeight:600,padding:"10px",cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>🔄 Machine busy? Swap exercise</button>}
+        </div>
+        <div style={{padding:"0 22px 40px"}}>
+          <button onClick={nextSet} style={{width:"100%",background:workout.color,border:"none",borderRadius:15,color:"#fff",fontSize:16,fontWeight:800,padding:"16px",cursor:"pointer",fontFamily:"inherit",boxShadow:`0 6px 24px ${workout.color}44`}}>{absMode&&exI+1===workout.abs.length&&setI+1===(exercise?.sets||3)?"FINISH 🎉":"COMPLETE SET →"}</button>
+        </div>
+      </div>}
+
+      {wScr==="rest"&&workout&&<div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 22px"}}>
+        <div style={{fontSize:10,color:"#555",letterSpacing:3,textTransform:"uppercase",marginBottom:16}}>Rest Time</div>
+        <div style={{width:150,height:150,borderRadius:"50%",border:`4px solid ${rrun&&rtimer>0?workout.color:"#4ade80"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginBottom:24,boxShadow:`0 0 40px ${rrun&&rtimer>0?workout.color+"33":"#4ade8033"}`}}>
+          <div style={{fontSize:48,fontWeight:900,color:rrun&&rtimer>0?workout.color:"#4ade80",letterSpacing:-2}}>{rtimer}</div>
+          <div style={{fontSize:11,color:"#444"}}>seconds</div>
+        </div>
+        {rtimer===0&&<div style={{fontSize:15,color:"#4ade80",fontWeight:700,marginBottom:20}}>✓ Rest complete!</div>}
+        <button onClick={()=>setWScr("exercise")} style={{width:"100%",background:rtimer>0?"#141420":workout.color,border:`1px solid ${rtimer>0?"#252535":workout.color}`,borderRadius:15,color:rtimer>0?"#888":"#fff",fontSize:16,fontWeight:700,padding:"15px",cursor:"pointer",fontFamily:"inherit"}}>{rtimer>0?"Skip Rest →":"Let's Go! →"}</button>
+      </div>}
+
+      {wScr==="done"&&workout&&<div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 22px",textAlign:"center"}}>
+        <div style={{fontSize:60,marginBottom:14}}>🎉</div>
+        <div style={{fontSize:26,fontWeight:900,marginBottom:6}}>WORKOUT<br/><span style={{color:workout.color}}>COMPLETE</span></div>
+        <div style={{fontSize:13,color:"#555",marginBottom:22}}>Day {workout.day} — {workout.name}</div>
+        <div style={{background:"#1a1208",border:"1px solid #3a2510",borderRadius:15,padding:"14px 16px",width:"100%",marginBottom:14,textAlign:"left"}}>
+          <div style={{fontSize:10,color:"#f97316",letterSpacing:2,textTransform:"uppercase",marginBottom:6}}>{workout.cardio.icon} NOW DO YOUR CARDIO</div>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>{workout.cardio.type} · {workout.cardio.duration}</div>
+          <div style={{fontSize:11,color:"#888",lineHeight:1.6}}>{workout.cardio.description}</div>
+        </div>
+        <button onClick={()=>setWScr("home")} style={{width:"100%",background:workout.color,border:"none",borderRadius:15,color:"#fff",fontSize:15,fontWeight:800,padding:"15px",cursor:"pointer",fontFamily:"inherit"}}>Back to Program</button>
+      </div>}
+    </div>}
+
+    {/* ═══ STRETCH ═══ */}
+    {tab==="stretch"&&<div>
+      {sScr==="home"&&<div>
+        <div style={{padding:"28px 22px 20px",background:`linear-gradient(180deg,#13131e,${bg})`}}>
+          <div style={{fontSize:10,letterSpacing:4,color:"#333",textTransform:"uppercase",marginBottom:6}}>Recovery</div>
+          <div style={{fontSize:28,fontWeight:900,letterSpacing:-1}}>STRETCH<br/><span style={{color:"#10b981"}}>ROUTINES</span></div>
+        </div>
+        <div style={{padding:"8px 22px"}}>
+          <div style={{background:"#1a0e0e",border:"1px solid #3a2020",borderRadius:13,padding:"11px 15px",marginBottom:14,display:"flex",gap:11,alignItems:"center"}}><span style={{fontSize:20}}>🧊</span><div><div style={{fontSize:12,fontWeight:700,color:"#f87171"}}>Groin injury reminder</div><div style={{fontSize:11,color:"#7a3a3a",marginTop:2}}>Ice 3x daily · Butterfly stretch daily</div></div></div>
+          {STRETCHES.map((r,i)=><div key={i} onClick={()=>startR(i)} style={{background:card,border:`1px solid ${r.color}33`,borderRadius:17,marginBottom:11,overflow:"hidden",cursor:"pointer"}}>
+            <div style={{display:"flex",alignItems:"center",gap:13,padding:"14px 16px"}}><div style={{width:46,height:46,borderRadius:13,background:r.color+"22",border:`1px solid ${r.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{r.emoji}</div><div style={{flex:1}}><div style={{fontSize:9,color:r.color,letterSpacing:2,textTransform:"uppercase",marginBottom:2}}>{r.duration} · {r.list.length} stretches</div><div style={{fontSize:16,fontWeight:800}}>{r.name}</div><div style={{fontSize:11,color:"#555",marginTop:2}}>{r.subtitle}</div></div><div style={{fontSize:18,color:"#252535"}}>▶</div></div>
+            <div style={{background:r.color+"11",padding:"5px 16px",fontSize:10,color:r.color+"99"}}>📌 {r.when}</div>
+          </div>)}
+        </div>
+      </div>}
+      {sScr==="stretch"&&rout&&stretch&&<div style={{minHeight:"100vh",display:"flex",flexDirection:"column"}}>
+        <div style={{padding:"20px 22px 14px",borderBottom:"1px solid #141420"}}>
+          <button onClick={()=>setSScr("home")} style={{background:"none",border:"none",color:"#555",fontSize:13,cursor:"pointer",fontFamily:"inherit",padding:0,marginBottom:10}}>← Back</button>
+          <div style={{fontSize:10,color:rout.color,letterSpacing:2,textTransform:"uppercase",marginBottom:3}}>{rout.name}</div>
+          <div style={{background:"#141420",borderRadius:99,height:4,overflow:"hidden",marginBottom:6}}><div style={{height:"100%",width:`${(sIdx/rout.list.length)*100}%`,background:rout.color,borderRadius:99,transition:"width .3s"}}/></div>
+          <div style={{fontSize:10,color:"#333"}}>{sIdx+1}/{rout.list.length}{stretch.sides?` · ${sSide==="left"?"LEFT":"RIGHT"} side`:""}</div>
+        </div>
+        <div style={{flex:1,padding:"16px 22px"}}>
+          <div style={{background:card,border:`1px solid ${rout.color}33`,borderRadius:20,padding:"20px 20px",marginBottom:14}}>
+            <div style={{fontSize:24,fontWeight:900,letterSpacing:-0.5,marginBottom:4}}>{stretch.emoji} {stretch.name}</div>
+            {stretch.sides&&<div style={{background:rout.color+"22",border:`1px solid ${rout.color}44`,borderRadius:9,padding:"7px 13px",marginBottom:12,fontSize:13,fontWeight:700,color:rout.color,textAlign:"center"}}>{sSide==="left"?"👈 LEFT SIDE":"👉 RIGHT SIDE"}</div>}
+            <div style={{background:"#141420",borderRadius:11,padding:"10px 13px",marginBottom:10,display:"flex",gap:9}}><span style={{fontSize:14}}>💡</span><div style={{fontSize:11,color:"#888",lineHeight:1.5}}>{stretch.why}</div></div>
+            <div style={{background:"#0f1a14",border:"1px solid #1e3a28",borderRadius:11,padding:"10px 13px",display:"flex",gap:9}}><span style={{fontSize:14}}>📋</span><div style={{fontSize:11,color:"#4a8a5a",lineHeight:1.6}}>{stretch.how}</div></div>
+          </div>
+          <div style={{textAlign:"center",marginBottom:14}}>
+            <div style={{fontSize:56,fontWeight:900,letterSpacing:-3,color:sRun&&sTimer>0?rout.color:"#333"}}>{sTimer>0?sTimer:stretch.dur}<span style={{fontSize:18,color:"#444"}}>s</span></div>
+            {!sRun&&<button onClick={()=>{setSTimer(stretch.dur);setSRun(true);}} style={{background:rout.color,border:"none",borderRadius:13,color:"#fff",fontSize:15,fontWeight:700,padding:"11px 28px",cursor:"pointer",fontFamily:"inherit",boxShadow:`0 4px 18px ${rout.color}44`}}>Start Timer ▶</button>}
+            {sRun&&<div style={{fontSize:11,color:"#555",marginTop:6}}>Breathe deeply...</div>}
+          </div>
+        </div>
+        <div style={{padding:"0 22px 40px",display:"flex",gap:9}}>
+          {sRun&&<button onClick={()=>{clearInterval(sref.current);setSRun(false);}} style={{flex:1,background:"#141420",border:`1px solid ${bdr}`,borderRadius:13,color:"#888",fontSize:14,padding:"13px",cursor:"pointer",fontFamily:"inherit"}}>Pause</button>}
+          <button onClick={nextStretch} style={{flex:2,background:rout.color,border:"none",borderRadius:13,color:"#fff",fontSize:15,fontWeight:800,padding:"13px",cursor:"pointer",fontFamily:"inherit",boxShadow:`0 4px 18px ${rout.color}44`}}>{stretch.sides&&sSide==="left"?"Next Side →":sIdx+1===rout.list.length?"Finish 🎉":"Next →"}</button>
+        </div>
+      </div>}
+      {sScr==="done"&&rout&&<div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 22px",textAlign:"center"}}><div style={{fontSize:60,marginBottom:14}}>🧘</div><div style={{fontSize:26,fontWeight:900,marginBottom:6}}>DONE!<br/><span style={{color:rout.color}}>GREAT WORK</span></div><div style={{fontSize:13,color:"#555",marginBottom:28}}>{rout.name}</div><button onClick={()=>setSScr("home")} style={{width:"100%",background:rout.color,border:"none",borderRadius:15,color:"#fff",fontSize:15,fontWeight:800,padding:"15px",cursor:"pointer",fontFamily:"inherit"}}>Back</button></div>}
+    </div>}
+
+    {/* ═══ CALORIES ═══ */}
+    {tab==="calories"&&<div>
+      <div style={{padding:"28px 22px 16px",background:`linear-gradient(180deg,#13131e,${bg})`,borderBottom:`1px solid ${bdr}`,position:"sticky",top:0,zIndex:20}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><div><div style={{fontSize:10,letterSpacing:3,color:"#44445a",textTransform:"uppercase",marginBottom:4}}>Nutrition</div><h1 style={{margin:0,fontSize:24,fontWeight:800,letterSpacing:-0.5}}>Calories</h1></div><button onClick={()=>setShowCal(true)} style={{background:"#f97316",border:"none",borderRadius:12,color:"#fff",fontSize:22,width:42,height:42,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 18px #f9731644"}}>+</button></div>
+        <div style={{marginTop:14}}><div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#555",marginBottom:6}}><span>{tCal} / {calGoal} kcal</span><span style={{color:ccol}}>{cpct}%</span></div><div style={{background:"#1a1a26",borderRadius:99,height:5,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(100,cpct)}%`,background:`linear-gradient(90deg,${ccol},${ccol}88)`,borderRadius:99,transition:"width .4s"}}/></div></div>
+      </div>
+      <div style={{padding:"16px 22px"}}>
+        <div style={{background:"linear-gradient(135deg,#1a1208,#1a1008)",border:"1px solid #3a2a10",borderRadius:17,padding:"16px 16px 13px",marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div><div style={{fontSize:9,color:"#7a5a20",letterSpacing:2,textTransform:"uppercase",marginBottom:3}}>Today</div><div style={{fontSize:34,fontWeight:800,color:ccol,letterSpacing:-1}}>{tCal.toLocaleString()}</div><div style={{fontSize:11,color:"#5a4a20"}}>of {calGoal.toLocaleString()} kcal</div></div>
+            <div style={{textAlign:"right"}}>{!editGoal?<button onClick={()=>{setEditGoal(true);setGoalIn(String(calGoal));}} style={{background:"#251f0a",border:"1px solid #3a3010",borderRadius:7,color:"#7a6030",fontSize:10,padding:"4px 8px",cursor:"pointer"}}>Edit goal</button>:<div style={{display:"flex",gap:4}}><input value={goalIn} onChange={e=>setGoalIn(e.target.value)} style={{width:60,background:"#0f0e08",border:"1px solid #3a3010",borderRadius:7,color:"#f0ece4",fontSize:11,padding:"4px 6px",fontFamily:"inherit",outline:"none"}}/><button onClick={()=>{const v=Number(goalIn);if(v>0)setCalGoal(v);setEditGoal(false);}} style={{background:"#f97316",border:"none",borderRadius:7,color:"#fff",fontSize:11,padding:"4px 8px",cursor:"pointer"}}>✓</button></div>}</div>
+          </div>
+          <div style={{background:"#0f0d06",borderRadius:99,height:6,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(100,cpct)}%`,background:`linear-gradient(90deg,${ccol},${ccol}88)`,borderRadius:99,transition:"width .4s",maxWidth:"100%"}}/></div>
+          {tCal>calGoal?<div style={{fontSize:11,color:"#f87171",marginTop:7,textAlign:"center"}}>⚠️ Over by {(tCal-calGoal).toLocaleString()} kcal</div>:<div style={{fontSize:11,color:"#5a7a5a",marginTop:7,textAlign:"center"}}>{(calGoal-tCal).toLocaleString()} kcal remaining</div>}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:9,marginBottom:16}}>
+          {[["Meals","🍽️",tLogs.length+" logged"],["Protein","🍗",tLogs.reduce((s,l)=>s+(l.aiResult?.protein_g||0),0)+"g"],["Status","🎯",cpct>105?"Over!":cpct>90?"Almost!":cpct>50?"On track":"Low"]].map(([l,e,v])=><div key={l} style={{background:card,border:`1px solid ${bdr}`,borderRadius:13,padding:"11px 9px",textAlign:"center"}}><div style={{fontSize:17,marginBottom:3}}>{e}</div><div style={{fontSize:11,fontWeight:700}}>{v}</div><div style={{fontSize:9,color:"#333",marginTop:2}}>{l}</div></div>)}
+        </div>
+        <div style={{fontSize:10,color:"#333",letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>Today's Log</div>
+        {tLogs.length===0&&<div style={{textAlign:"center",padding:"36px 0",color:"#2a2a3a"}}><div style={{fontSize:30,marginBottom:8}}>🍽️</div><div style={{fontSize:13}}>No meals logged</div><div style={{fontSize:11,marginTop:3,color:"#222"}}>Tap + to add food</div></div>}
+        {tLogs.map(e=><div key={e.id} style={{display:"flex",alignItems:"center",gap:11,padding:"11px 13px",background:card,border:`1px solid ${bdr}`,borderRadius:13,marginBottom:8}}>
+          {e.photo?<img src={e.photo} alt={e.name} onClick={()=>setVPhoto(e.photo)} style={{width:44,height:44,borderRadius:9,objectFit:"cover",border:`1px solid ${bdr}`,cursor:"pointer",flexShrink:0}}/>:<div style={{width:44,height:44,borderRadius:9,background:"#1a1a26",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🍽️</div>}
+          <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:13,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.name}</div><div style={{fontSize:9,color:"#444",marginTop:2}}>{e.time}{e.aiResult?.protein_g?` · ${e.aiResult.protein_g}g protein`:""}</div></div>
+          <div style={{textAlign:"right",flexShrink:0}}><div style={{fontWeight:700,fontSize:15,color:"#f97316"}}>{e.calories}</div><div style={{fontSize:9,color:"#444"}}>kcal</div></div>
+          <button onClick={()=>delCal(today,e.id)} style={{background:"none",border:"none",color:"#3a2a2a",fontSize:15,cursor:"pointer",padding:3}}>✕</button>
+        </div>)}
+        {last7.slice(0,-1).filter(d=>(calLogs[d]||[]).length>0).reverse().map(d=><div key={d} style={{marginBottom:14}}>
+          <div style={{fontSize:10,color:"#2a2a3a",letterSpacing:2,textTransform:"uppercase",marginBottom:7}}>{new Date(d+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})} — {totalCal(calLogs[d]).toLocaleString()} kcal</div>
+          {(calLogs[d]||[]).map(e=><div key={e.id} style={{display:"flex",alignItems:"center",gap:9,padding:"9px 11px",background:"#0c0c10",border:"1px solid #141420",borderRadius:11,marginBottom:5,opacity:.7}}>
+            {e.photo?<img src={e.photo} alt={e.name} onClick={()=>setVPhoto(e.photo)} style={{width:32,height:32,borderRadius:7,objectFit:"cover",cursor:"pointer",flexShrink:0}}/>:<div style={{width:32,height:32,borderRadius:7,background:"#141420",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>🍽️</div>}
+            <span style={{flex:1,fontSize:11,color:"#666",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.name}</span>
+            <span style={{fontSize:11,fontWeight:700,color:"#7a4a20"}}>{e.calories} kcal</span>
+          </div>)}
+        </div>)}
+      </div>
+    </div>}
+
+    {/* ═══ PROGRESS ═══ */}
+    {tab==="progress"&&<div>
+      <div style={{padding:"28px 22px 16px",background:`linear-gradient(180deg,#13131e,${bg})`,borderBottom:`1px solid ${bdr}`}}>
+        <div style={{fontSize:10,letterSpacing:3,color:"#33335a",textTransform:"uppercase",marginBottom:4}}>Tracking</div>
+        <h1 style={{margin:0,fontSize:24,fontWeight:800,letterSpacing:-0.5}}>Progress</h1>
+      </div>
+      <div style={{display:"flex",padding:"0 22px",borderBottom:`1px solid ${bdr}`,background:bg,overflowX:"auto"}}>
+        {[["body","💪 Body"],["history","🏋️ Workouts"],["sleep","😴 Sleep"],["goals","🎯 Goals"]].map(([k,l])=><button key={k} onClick={()=>setPView(k)} style={{background:"none",border:"none",color:pView===k?"#5b52f0":"#444",fontFamily:"inherit",fontSize:12,fontWeight:pView===k?700:400,padding:"10px 12px 13px",cursor:"pointer",borderBottom:pView===k?"2px solid #5b52f0":"2px solid transparent",marginBottom:-1,whiteSpace:"nowrap"}}>{l}</button>)}
+      </div>
+      <div style={{padding:"16px 22px"}}>
+
+        {pView==="body"&&<div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{fontSize:14,fontWeight:700}}>Body Measurements</div>
+            <button onClick={()=>setShowBody(true)} style={{background:"#5b52f0",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit"}}>+ Log</button>
+          </div>
+          {bodyLogs.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:"#2a2a3a"}}><div style={{fontSize:32,marginBottom:10}}>💪</div><div style={{fontSize:13}}>No measurements yet</div><div style={{fontSize:11,color:"#222",marginTop:4}}>Log weekly to track your transformation</div></div>}
+          {bodyLogs.length>=2&&<div style={{background:"linear-gradient(135deg,#0e1a0e,#0e1808)",border:"1px solid #1e3a1e",borderRadius:15,padding:"14px 16px",marginBottom:16}}>
+            <div style={{fontSize:10,color:"#4ade80",letterSpacing:2,textTransform:"uppercase",marginBottom:10}}>📈 Progress since start</div>
+            {["weight","chest","waist","arms","legs"].map(key=>{
+              const first=bodyLogs[bodyLogs.length-1][key];const last=bodyLogs[0][key];
+              if(!first||!last)return null;
+              const diff=(Number(last)-Number(first)).toFixed(1);
+              const good=key==="waist"?Number(diff)<=0:Number(diff)>=0;
+              return<div key={key} style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:6}}><span style={{color:"#555",textTransform:"capitalize"}}>{key}</span><span style={{color:good?"#4ade80":"#f87171",fontWeight:700}}>{diff>0?"+":""}{diff} {key==="weight"?"lbs":"in"}</span></div>;
+            })}
+          </div>}
+          {bodyLogs.slice(0,8).map((log,i)=><div key={log.id} style={{background:card,border:`1px solid ${bdr}`,borderRadius:14,padding:"12px 15px",marginBottom:9}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
+              <div style={{fontSize:13,fontWeight:700}}>{new Date(log.date+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>
+              <div style={{fontSize:15,fontWeight:800,color:"#5b52f0"}}>{log.weight} lbs</div>
+            </div>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+              {[["chest","Chest"],["waist","Waist"],["arms","Arms"],["legs","Legs"]].map(([k,l])=>log[k]?<div key={k} style={{fontSize:10,color:"#555"}}>{l}: <span style={{color:"#888"}}>{log[k]}"</span></div>:null)}
+            </div>
+          </div>)}
+        </div>}
+
+        {pView==="history"&&<div>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>Workout History</div>
+          {wHist.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:"#2a2a3a"}}><div style={{fontSize:32,marginBottom:10}}>🏋️</div><div style={{fontSize:13}}>No workouts yet</div><div style={{fontSize:11,color:"#222",marginTop:4}}>Complete a workout to see your history</div></div>}
+          {wHist.map((rec,i)=>{
+            const w=WORKOUTS[rec.dayIdx];const soreE=["","😊","🙂","😐","😤","🔥"];
+            return<div key={rec.id} style={{background:card,border:`1px solid ${w?.color+"33"||bdr}`,borderRadius:14,padding:"13px 15px",marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                <div><div style={{fontSize:10,color:w?.color||"#555",letterSpacing:2,textTransform:"uppercase",marginBottom:2}}>{new Date(rec.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}</div><div style={{fontSize:15,fontWeight:800}}>{rec.dayName}</div></div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:20}}>{soreE[rec.recoveryRating]||""}</div><div style={{fontSize:9,color:"#444"}}>recovery</div></div>
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <div style={{background:"#141420",borderRadius:8,padding:"4px 10px",fontSize:10,color:"#888"}}>⏱ {rec.duration} min</div>
+                <div style={{background:"#141420",borderRadius:8,padding:"4px 10px",fontSize:10,color:"#888"}}>📝 {rec.totalSets} sets</div>
+                {rec.cardio&&<div style={{background:"#141420",borderRadius:8,padding:"4px 10px",fontSize:10,color:"#888"}}>🏃 {rec.cardio}</div>}
+              </div>
+              {rec.sets?.filter(s=>s.weight).slice(0,3).length>0&&<div style={{marginTop:8,borderTop:"1px solid #141420",paddingTop:8}}>
+                <div style={{fontSize:9,color:"#333",marginBottom:5}}>TOP SETS</div>
+                {rec.sets.filter(s=>s.weight).slice(0,3).map((s,j)=><div key={j} style={{fontSize:11,color:"#666",marginBottom:2}}>{s.exercise} — {s.weight}lbs × {s.reps}reps</div>)}
+              </div>}
+            </div>;
+          })}
+        </div>}
+
+        {pView==="sleep"&&<div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div style={{fontSize:14,fontWeight:700}}>Sleep Tracker</div>
+            <button onClick={()=>setShowSleep(true)} style={{background:"#5b52f0",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit"}}>+ Log</button>
+          </div>
+          <div style={{background:"linear-gradient(135deg,#0e0e1a,#131320)",border:"1px solid #252540",borderRadius:15,padding:"14px 16px",marginBottom:16}}>
+            <div style={{fontSize:10,color:"#8888cc",letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>🛏️ Goal for 7:30am wake-up</div>
+            <div style={{display:"flex",gap:10}}>
+              <div style={{background:"#5b52f022",border:"1px solid #5b52f044",borderRadius:10,padding:"10px 14px",flex:1,textAlign:"center"}}><div style={{fontSize:17,fontWeight:800,color:"#a0a0ff"}}>10:30pm</div><div style={{fontSize:10,color:"#444"}}>9 hours (ideal)</div></div>
+              <div style={{background:"#5b52f022",border:"1px solid #5b52f044",borderRadius:10,padding:"10px 14px",flex:1,textAlign:"center"}}><div style={{fontSize:17,fontWeight:800,color:"#a0a0ff"}}>12:00am</div><div style={{fontSize:10,color:"#444"}}>7.5 hours (good)</div></div>
+            </div>
+          </div>
+          {sleepLogs.length===0&&<div style={{textAlign:"center",padding:"36px 0",color:"#2a2a3a"}}><div style={{fontSize:30,marginBottom:8}}>😴</div><div style={{fontSize:13}}>No sleep logged yet</div></div>}
+          {sleepLogs.slice(0,14).map((log,i)=>{
+            const hrs=Number(log.hours);const good=hrs>=7.5;const great=hrs>=8.5;
+            const col=great?"#4ade80":good?"#facc15":"#f87171";
+            const stars=["","⭐","⭐⭐","⭐⭐⭐","⭐⭐⭐⭐","⭐⭐⭐⭐⭐"];
+            return<div key={log.id} style={{background:card,border:`1px solid ${col}33`,borderRadius:13,padding:"12px 15px",marginBottom:9,display:"flex",alignItems:"center",gap:12}}>
+              <div style={{width:46,height:46,borderRadius:12,background:col+"22",border:`1px solid ${col}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><div style={{fontSize:16,fontWeight:900,color:col}}>{log.hours}h</div></div>
+              <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700}}>{new Date(log.date+"T12:00:00").toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}</div><div style={{fontSize:11,color:"#555",marginTop:2}}>{log.bedtime} → {log.wakeup} · {stars[log.quality]}</div></div>
+              <div style={{fontSize:11,color:col,fontWeight:700}}>{great?"Great":good?"Good":"Short"}</div>
+            </div>;
+          })}
+          {sleepLogs.length>0&&<div style={{background:card,border:`1px solid ${bdr}`,borderRadius:13,padding:"12px 15px",marginTop:4}}>
+            <div style={{fontSize:10,color:"#444",letterSpacing:2,marginBottom:6}}>7-DAY AVERAGE</div>
+            <div style={{fontSize:24,fontWeight:800,color:"#5b52f0"}}>{(sleepLogs.slice(0,7).reduce((s,l)=>s+Number(l.hours),0)/Math.min(7,sleepLogs.length)).toFixed(1)} hrs</div>
+          </div>}
+        </div>}
+
+        {pView==="goals"&&<div>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:4}}>Weekly Goals</div>
+          <div style={{fontSize:11,color:"#444",marginBottom:16}}>Week of {new Date(ws+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>
+          {WGOALS.map(goal=>{
+            const cur=wkc(goal.id);const pct=Math.min(100,Math.round((cur/goal.target)*100));const col=pct>=100?"#4ade80":pct>=60?"#facc15":"#f87171";
+            return<div key={goal.id} style={{background:card,border:`1px solid ${col}33`,borderRadius:15,padding:"14px 16px",marginBottom:12}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{fontSize:22}}>{goal.emoji}</span><div><div style={{fontSize:14,fontWeight:700}}>{goal.label}</div><div style={{fontSize:11,color:"#555"}}>Target: {goal.target} {goal.unit}</div></div></div>
+                <div style={{textAlign:"right"}}><div style={{fontSize:20,fontWeight:900,color:col}}>{cur}/{goal.target}</div><div style={{fontSize:9,color:"#444"}}>{pct}%</div></div>
+              </div>
+              <div style={{background:"#141420",borderRadius:99,height:6,overflow:"hidden",marginBottom:10}}><div style={{height:"100%",width:`${pct}%`,background:col,borderRadius:99,transition:"width .4s"}}/></div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>incWk(goal.id)} style={{flex:1,background:col+"22",border:`1px solid ${col}44`,borderRadius:10,color:col,fontSize:13,fontWeight:700,padding:"8px",cursor:"pointer",fontFamily:"inherit"}}>+ Add one</button>
+                {pct>=100&&<div style={{background:"#4ade8022",border:"1px solid #4ade8044",borderRadius:10,padding:"8px 14px",fontSize:13,color:"#4ade80"}}>✓ Done!</div>}
+              </div>
+            </div>;
+          })}
+        </div>}
+      </div>
+    </div>}
+
+    {/* RECOVERY MODAL */}
+    {showRecov&&workout&&<div style={{position:"fixed",inset:0,background:"#000000cc",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:22}}>
+      <div style={{background:"#13131e",borderRadius:22,padding:26,width:"100%",maxWidth:340,border:"1px solid #252535",textAlign:"center"}}>
+        <div style={{fontSize:36,marginBottom:12}}>💪</div>
+        <div style={{fontSize:18,fontWeight:800,marginBottom:6}}>Workout Done!</div>
+        <div style={{fontSize:13,color:"#555",marginBottom:20}}>How sore are you feeling?</div>
+        <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:20}}>
+          {[[1,"😊","Fresh"],[2,"🙂","Good"],[3,"😐","Okay"],[4,"😤","Sore"],[5,"🔥","Wrecked"]].map(([n,e,l])=><button key={n} onClick={()=>setRecov(n)} style={{background:recov===n?"#5b52f0":"#1a1a26",border:`1px solid ${recov===n?"#5b52f0":"#252535"}`,borderRadius:12,padding:"10px 4px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,flex:1}}><span style={{fontSize:20}}>{e}</span><span style={{fontSize:8,color:recov===n?"#fff":"#555"}}>{l}</span></button>)}
+        </div>
+        <button onClick={()=>finishW(recov)} disabled={!recov} style={{width:"100%",background:recov?"#5b52f0":"#1a1a26",border:"none",borderRadius:13,color:recov?"#fff":"#555",fontSize:15,fontWeight:700,padding:13,cursor:recov?"pointer":"default",fontFamily:"inherit",marginBottom:8}}>Save →</button>
+        <button onClick={()=>finishW(null)} style={{width:"100%",background:"none",border:"none",color:"#333",fontSize:12,padding:"8px",cursor:"pointer",fontFamily:"inherit"}}>Skip</button>
+      </div>
+    </div>}
+
+    {/* SWAP MODAL */}
+    {swapEx&&<div style={{position:"fixed",inset:0,background:"#000000dd",zIndex:100,display:"flex",alignItems:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget)setSwapEx(null);}}>
+      <div style={{background:"#13131e",borderRadius:"22px 22px 0 0",width:"100%",padding:"24px 22px 44px",border:"1px solid #252535"}}>
+        <div style={{fontSize:15,fontWeight:700,marginBottom:3}}>Swap Exercise</div>
+        <div style={{fontSize:11,color:"#555",marginBottom:16}}>Machine busy? Pick alternative for <span style={{color:"#facc15"}}>{swapEx.name}</span></div>
+        {swapEx.swaps?.map((sw,i)=><div key={i} onClick={()=>applySwap(sw)} style={{background:card,border:"1px solid #facc1533",borderRadius:13,padding:"13px 15px",marginBottom:9,cursor:"pointer",display:"flex",alignItems:"center",gap:11}}>
+          <div style={{width:34,height:34,borderRadius:9,background:"#facc1522",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🔄</div>
+          <div style={{flex:1}}><div style={{fontSize:14,fontWeight:700}}>{sw.name}</div><div style={{fontSize:11,color:"#666",marginTop:2}}>{sw.tip}</div></div>
+          <div style={{fontSize:17,color:"#facc15"}}>→</div>
+        </div>)}
+        <button onClick={()=>setSwapEx(null)} style={{width:"100%",background:"#1a1a26",border:"none",borderRadius:11,color:"#888",fontSize:13,padding:"11px",cursor:"pointer",fontFamily:"inherit",marginTop:6}}>Keep Original</button>
+      </div>
+    </div>}
+
+    {/* ADD CALORIE MODAL */}
+    {showCal&&<div style={{position:"fixed",inset:0,background:"#000000cc",zIndex:100,display:"flex",alignItems:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget){setShowCal(false);setFSearch("");setFRes([]);}}}>
+      <div style={{background:"#13130e",borderRadius:"22px 22px 0 0",width:"100%",padding:"24px 22px 44px",border:"1px solid #2a2510",maxHeight:"90vh",overflowY:"auto"}}>
+        <div style={{fontSize:15,fontWeight:700,marginBottom:14}}>Log a Meal</div>
+        <div style={{display:"flex",gap:8,marginBottom:16}}>
+          <button onClick={()=>setCalMode("search")} style={{flex:1,background:calMode==="search"?"#f97316":"#1a1a10",border:`1px solid ${calMode==="search"?"#f97316":"#3a3010"}`,borderRadius:11,color:calMode==="search"?"#fff":"#7a6030",fontSize:13,fontWeight:calMode==="search"?700:400,padding:"9px",cursor:"pointer",fontFamily:"inherit"}}>🔍 Search</button>
+          <button onClick={()=>setCalMode("photo")} style={{flex:1,background:calMode==="photo"?"#f97316":"#1a1a10",border:`1px solid ${calMode==="photo"?"#f97316":"#3a3010"}`,borderRadius:11,color:calMode==="photo"?"#fff":"#7a6030",fontSize:13,fontWeight:calMode==="photo"?700:400,padding:"9px",cursor:"pointer",fontFamily:"inherit"}}>📷 Photo</button>
+        </div>
+        {calMode==="search"&&<div>
+          <div style={{position:"relative",marginBottom:10}}>
+            <input value={fSearch} onChange={e=>handleFS(e.target.value)} placeholder="Search any food, brand, restaurant..." style={{...inp({background:"#0f0e08",borderColor:"#2a2510"}),paddingRight:36}}/>
+            {fLoad&&<div style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",fontSize:14}}>⏳</div>}
+          </div>
+          {fRes.length>0&&<div style={{marginBottom:12}}>{fRes.map((item,i)=><div key={i} onClick={()=>pickFood(item)} style={{background:"#0f0e08",border:"1px solid #2a2510",borderRadius:11,padding:"11px 13px",marginBottom:7,cursor:"pointer",display:"flex",alignItems:"center",gap:11}}>
+            <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{item.name}</div><div style={{fontSize:10,color:"#7a5a20",marginTop:2}}>{item.serving} · {item.protein_g}g protein</div></div>
+            <div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:17,fontWeight:800,color:"#f97316"}}>{item.calories}</div><div style={{fontSize:9,color:"#5a3a10"}}>kcal</div></div>
+          </div>)}</div>}
+          {fSearch&&!fLoad&&fRes.length===0&&<div style={{textAlign:"center",padding:"14px",color:"#3a3010",fontSize:11}}>Type to search any food or brand</div>}
+        </div>}
+        {calMode==="photo"&&<div>
+          <div onClick={()=>fref.current.click()} style={{width:"100%",height:100,background:"#0f0e08",border:`2px dashed ${calE.photo?"#f97316":"#2a2510"}`,borderRadius:13,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",marginBottom:12,overflow:"hidden",boxSizing:"border-box",position:"relative"}}>
+            {calE.photo?<img src={calE.photo} alt="meal" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{textAlign:"center",color:"#4a3a10"}}><div style={{fontSize:22,marginBottom:3}}>📷</div><div style={{fontSize:11}}>Photo → AI estimates calories</div></div>}
+            {aiLoad&&<div style={{position:"absolute",inset:0,background:"#000000aa",display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{textAlign:"center"}}><div style={{fontSize:22,marginBottom:6}}>🤖</div><div style={{fontSize:11,color:"#f97316"}}>Analyzing...</div></div></div>}
+          </div>
+          <input ref={fref} type="file" accept="image/*" onChange={handlePhoto} style={{display:"none"}}/>
+          {calE.aiResult&&<div style={{background:"#0f1a0a",border:"1px solid #1e3a10",borderRadius:11,padding:"9px 13px",marginBottom:10}}><div style={{fontSize:9,color:"#4ade80",letterSpacing:2,marginBottom:3}}>🤖 {calE.aiResult.confidence} confidence</div><div style={{fontSize:11,color:"#6abe80"}}>{calE.aiResult.breakdown}</div></div>}
+        </div>}
+        <input value={calE.name} onChange={e=>setCalE(p=>({...p,name:e.target.value}))} placeholder="Meal name..." style={inp({marginBottom:9,background:"#0f0e08",borderColor:"#2a2510"})}/>
+        <input value={calE.calories} onChange={e=>setCalE(p=>({...p,calories:e.target.value}))} placeholder="Calories (kcal)" type="number" style={inp({marginBottom:14,background:"#0f0e08",borderColor:"#2a2510"})}/>
+        <button onClick={addCal} style={{width:"100%",background:"#f97316",border:"none",borderRadius:13,color:"#fff",fontSize:15,fontWeight:700,padding:13,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 4px 18px #f9731644"}}>Add to Log</button>
+      </div>
+    </div>}
+
+    {/* ADD/EDIT HABIT MODAL */}
+    {addHabit&&<div style={{position:"fixed",inset:0,background:"#000000cc",zIndex:100,display:"flex",alignItems:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget){setAddHabit(false);setEditH(null);}}}>
+      <div style={{background:"#13131e",borderRadius:"22px 22px 0 0",width:"100%",padding:"24px 22px 44px",border:"1px solid #252535"}}>
+        <div style={{fontSize:15,fontWeight:700,marginBottom:16}}>{editH?"Edit Habit":"New Habit"}</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:13}}>{EMOJIS.map(e=><button key={e} onClick={()=>setNh(p=>({...p,emoji:e}))} style={{background:nh.emoji===e?"#5b52f0":"#1a1a26",border:"none",borderRadius:8,fontSize:16,width:34,height:34,cursor:"pointer"}}>{e}</button>)}</div>
+        <input value={nh.name} onChange={e=>setNh(p=>({...p,name:e.target.value}))} placeholder="Habit name..." style={inp({marginBottom:10})}/>
+        <div style={{fontSize:11,color:"#555",marginBottom:8}}>Type</div>
+        <div style={{display:"flex",gap:7,marginBottom:12}}>{[["normal","Single check"],["double","Twice daily"]].map(([t,l])=><button key={t} onClick={()=>setNh(p=>({...p,type:t}))} style={{background:nh.type===t?"#5b52f0":"#1a1a26",border:"none",borderRadius:10,color:"#fff",fontSize:12,padding:"7px 13px",cursor:"pointer",fontFamily:"inherit"}}>{l}</button>)}</div>
+        <div style={{fontSize:11,color:"#555",marginBottom:8}}>Frequency</div>
+        <div style={{display:"flex",gap:7,marginBottom:12}}>{["daily","custom"].map(f=><button key={f} onClick={()=>setNh(p=>({...p,frequency:f}))} style={{background:nh.frequency===f?"#5b52f0":"#1a1a26",border:"none",borderRadius:10,color:"#fff",fontSize:13,padding:"8px 16px",cursor:"pointer",fontFamily:"inherit"}}>{f==="daily"?"Every day":"Specific days"}</button>)}</div>
+        {nh.frequency==="custom"&&<div style={{display:"flex",gap:7,marginBottom:14}}>{DAY_NAMES.map((d,i)=><button key={d} onClick={()=>togDay(d)} style={{background:nh.days.includes(d)?"#5b52f0":"#1a1a26",border:"none",borderRadius:8,color:"#fff",fontSize:12,width:34,height:34,cursor:"pointer",fontFamily:"inherit"}}>{DAY_LABELS[i]}</button>)}</div>}
+        <button onClick={saveH} style={{width:"100%",background:"#5b52f0",border:"none",borderRadius:13,color:"#fff",fontSize:15,fontWeight:700,padding:13,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 4px 18px #5b52f044"}}>{editH?"Save Changes":"Add Habit"}</button>
+      </div>
+    </div>}
+
+    {/* BODY LOG MODAL */}
+    {showBody&&<div style={{position:"fixed",inset:0,background:"#000000cc",zIndex:100,display:"flex",alignItems:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget)setShowBody(false);}}>
+      <div style={{background:"#13131e",borderRadius:"22px 22px 0 0",width:"100%",padding:"24px 22px 44px",border:"1px solid #252535"}}>
+        <div style={{fontSize:15,fontWeight:700,marginBottom:18}}>Log Measurements</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+          {[["weight","Weight (lbs)","⚖️"],["chest","Chest (in)","📏"],["waist","Waist (in)","📏"],["arms","Arms (in)","💪"],["legs","Legs (in)","🦵"]].map(([k,l,e])=><div key={k} style={{gridColumn:k==="weight"?"1 / -1":"auto"}}>
+            <div style={{fontSize:10,color:"#555",marginBottom:5}}>{e} {l}</div>
+            <input value={bodyE[k]} onChange={ev=>setBodyE(p=>({...p,[k]:ev.target.value}))} placeholder="0" type="number" step="0.1" style={inp({background:"#0c0c14"})}/>
+          </div>)}
+        </div>
+        <button onClick={addBodyLog} style={{width:"100%",background:"#5b52f0",border:"none",borderRadius:13,color:"#fff",fontSize:15,fontWeight:700,padding:13,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 4px 18px #5b52f044"}}>Save Measurements</button>
+      </div>
+    </div>}
+
+    {/* SLEEP LOG MODAL */}
+    {showSleep&&<div style={{position:"fixed",inset:0,background:"#000000cc",zIndex:100,display:"flex",alignItems:"flex-end"}} onClick={e=>{if(e.target===e.currentTarget)setShowSleep(false);}}>
+      <div style={{background:"#13131e",borderRadius:"22px 22px 0 0",width:"100%",padding:"24px 22px 44px",border:"1px solid #252535"}}>
+        <div style={{fontSize:15,fontWeight:700,marginBottom:18}}>Log Sleep</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+          <div><div style={{fontSize:10,color:"#555",marginBottom:5}}>🌙 Bedtime</div><input type="time" value={sleepE.bedtime} onChange={e=>setSleepE(p=>({...p,bedtime:e.target.value}))} style={inp({background:"#0c0c14"})}/></div>
+          <div><div style={{fontSize:10,color:"#555",marginBottom:5}}>☀️ Wake up</div><input type="time" value={sleepE.wakeup} onChange={e=>setSleepE(p=>({...p,wakeup:e.target.value}))} style={inp({background:"#0c0c14"})}/></div>
+        </div>
+        {sleepE.bedtime&&sleepE.wakeup&&<div style={{background:"#0f1a14",border:"1px solid #1e3a28",borderRadius:11,padding:"10px 14px",marginBottom:14,textAlign:"center"}}>
+          <div style={{fontSize:20,fontWeight:800,color:"#4ade80"}}>{sleepHours(sleepE.bedtime,sleepE.wakeup)} hours</div>
+          <div style={{fontSize:11,color:Number(sleepHours(sleepE.bedtime,sleepE.wakeup))>=7.5?"#3a6a3a":"#7a3a3a"}}>{Number(sleepHours(sleepE.bedtime,sleepE.wakeup))>=7.5?"✓ Good sleep":"⚠️ Under 7.5 hours"}</div>
+        </div>}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:10,color:"#555",marginBottom:8}}>Sleep quality</div>
+          <div style={{display:"flex",gap:8}}>{[[1,"😫"],[2,"😐"],[3,"🙂"],[4,"😊"],[5,"🌟"]].map(([n,e])=><button key={n} onClick={()=>setSleepE(p=>({...p,quality:n}))} style={{flex:1,background:sleepE.quality===n?"#5b52f0":"#1a1a26",border:`1px solid ${sleepE.quality===n?"#5b52f0":"#252535"}`,borderRadius:10,fontSize:20,padding:"10px 0",cursor:"pointer"}}>{e}</button>)}</div>
+        </div>
+        <button onClick={addSleepLog} style={{width:"100%",background:"#5b52f0",border:"none",borderRadius:13,color:"#fff",fontSize:15,fontWeight:700,padding:13,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 4px 18px #5b52f044"}}>Save Sleep</button>
+      </div>
+    </div>}
+
+    {/* DELETE CONFIRM */}
+    {delH&&<div style={{position:"fixed",inset:0,background:"#000000cc",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center"}}><div style={{background:"#13131e",borderRadius:20,padding:22,width:"80%",maxWidth:290,border:"1px solid #252535"}}><div style={{fontSize:14,fontWeight:700,marginBottom:6}}>Delete habit?</div><div style={{fontSize:11,color:"#555",marginBottom:16}}>All history removed.</div><div style={{display:"flex",gap:8}}><button onClick={()=>setDelH(null)} style={{flex:1,background:"#1a1a26",border:"none",borderRadius:10,color:"#888",fontSize:13,padding:10,cursor:"pointer"}}>Cancel</button><button onClick={()=>delHabit(delH)} style={{flex:1,background:"#f87171",border:"none",borderRadius:10,color:"#fff",fontSize:13,fontWeight:700,padding:10,cursor:"pointer"}}>Delete</button></div></div></div>}
+
+    {/* PHOTO LIGHTBOX */}
+    {vPhoto&&<div onClick={()=>setVPhoto(null)} style={{position:"fixed",inset:0,background:"#000000ee",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:22}}><img src={vPhoto} alt="meal" style={{maxWidth:"100%",maxHeight:"80vh",borderRadius:15,objectFit:"contain"}}/></div>}
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
